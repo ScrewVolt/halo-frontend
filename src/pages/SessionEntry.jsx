@@ -150,7 +150,7 @@ export default function SessionEntry() {
     const chatText = messages.map((m) => m.text).join("\n");
 
     try {
-      const res = await fetch("https://halo-back.onrender.com", {
+      const res = await fetch("https://halo-back.onrender.com/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: chatText }),
