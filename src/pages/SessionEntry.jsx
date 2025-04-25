@@ -16,7 +16,7 @@ import ChatMessage from "../components/ChatMessage";
 import VoiceToggle from "../components/VoiceToggle";
 import SummaryViewer from "../components/SummaryViewer";
 import jsPDF from "jspdf";
-import generateFHIRDocument from "../utils/generateFHIRdocument";
+import generateFHIRDocument from "../utils/generateFHIRDocument";
 
 export default function SessionEntry() {
   const { id: patientId, sessionId } = useParams();
