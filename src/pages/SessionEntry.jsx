@@ -37,64 +37,63 @@ export default function SessionEntry() {
   const shouldRestartRef = useRef(true);
   const user = auth.currentUser;
 
-    useEffect(() => {
-      if (!user || !patientId || !sessionId) return;
-      const loadPatientAndSession = async () => {
-        const patientRef = doc(db, "users", user.uid, "patients", patientId);
-        const patientSnap = await getDoc(patientRef);
-        if (patientSnap.exists()) {
-          setPatient({ id: patientSnap.id, ...patientSnap.data() });
-        }
-  
-        const sessionRef = doc(db, "users", user.uid, "patients", patientId, "sessions", sessionId);
-        const sessionSnap = await getDoc(sessionRef);
-        if (sessionSnap.exists()) {
-          const sessionData = sessionSnap.data();
-          setDarNote(sessionData.darNote || "");
-          setGeneratedAt(sessionData.generatedAt || null);
-          setSessionNotes(sessionData.sessionNotes || "");
-          setStartedAt(sessionData.startedAt || null);
-          setLastUsedAt(sessionData.lastUsedAt || null);
-        }
-      };
-      loadPatientAndSession();
-    }, [user, patientId, sessionId]);
+  useEffect(() => {
+    if (!user || !patientId || !sessionId) return;
+    const loadPatientAndSession = async () => {
+      const patientRef = doc(db, "users", user.uid, "patients", patientId);
+      const patientSnap = await getDoc(patientRef);
+      if (patientSnap.exists()) {
+        setPatient({ id: patientSnap.id, ...patientSnap.data() });
+      }
 
-    useEffect(() => {
-      if (!user || !patientId || !sessionId) return;
-      const q = query(
-        collection(db, "users", user.uid, "patients", patientId, "sessions", sessionId, "messages"),
-        orderBy("createdAt", "asc")
-      );
-      const unsub = onSnapshot(q, (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setMessages(data);
-      });
-      return () => unsub();
-    }, [user, patientId, sessionId]);
+      const sessionRef = doc(db, "users", user.uid, "patients", patientId, "sessions", sessionId);
+      const sessionSnap = await getDoc(sessionRef);
+      if (sessionSnap.exists()) {
+        const sessionData = sessionSnap.data();
+        setDarNote(sessionData.darNote || "");
+        setGeneratedAt(sessionData.generatedAt || null);
+        setSessionNotes(sessionData.sessionNotes || "");
+        setStartedAt(sessionData.startedAt || null);
+        setLastUsedAt(sessionData.lastUsedAt || null);
+      }
+    };
+    loadPatientAndSession();
+  }, [user, patientId, sessionId]);
 
-      const sendMessage = async (text) => {
-        const timestamp = new Date();
-        const full = `[${timestamp.toLocaleTimeString()}] ${
-          speaker === "nurse" ? "Nurse" : "Patient"
-        }: ${text}`;
-    
-        await addDoc(
-          collection(db, "users", user.uid, "patients", patientId, "sessions", sessionId, "messages"),
-          {
-            text: full,
-            createdAt: timestamp,
-          }
-        );
-    
-        await updateDoc(doc(db, "users", user.uid, "patients", patientId, "sessions", sessionId), {
-          lastUsedAt: timestamp.toISOString(),
-          startedAt: startedAt || timestamp.toISOString(),
-        });
-    
-        setChatInput("");
-        setLiveTranscript("");
-      };
+  useEffect(() => {
+    if (!user || !patientId || !sessionId) return;
+    const q = query(
+      collection(db, "users", user.uid, "patients", patientId, "sessions", sessionId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setMessages(data);
+    });
+    return () => unsub();
+  }, [user, patientId, sessionId]);
+
+  const sendMessage = async (text) => {
+    const timestamp = new Date();
+    const full = `[${timestamp.toLocaleTimeString()}] ${speaker === "nurse" ? "Nurse" : "Patient"
+      }: ${text}`;
+
+    await addDoc(
+      collection(db, "users", user.uid, "patients", patientId, "sessions", sessionId, "messages"),
+      {
+        text: full,
+        createdAt: timestamp,
+      }
+    );
+
+    await updateDoc(doc(db, "users", user.uid, "patients", patientId, "sessions", sessionId), {
+      lastUsedAt: timestamp.toISOString(),
+      startedAt: startedAt || timestamp.toISOString(),
+    });
+
+    setChatInput("");
+    setLiveTranscript("");
+  };
 
   const startRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -187,99 +186,99 @@ export default function SessionEntry() {
     }
   };
 
-  
-const handleExport = async () => {
-  const pdf = new jsPDF({ unit: "pt", format: "a4" }); // A4 for professional standard
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  let y = 40;
-  const leftMargin = 40;
-  const lineHeight = 18;
 
-  const addPageIfNeeded = (extraHeight = 0) => {
-    if (y + extraHeight > pageHeight - 40) {
-      pdf.addPage();
-      y = 40;
-    }
-  };
+  const handleExport = async () => {
+    const pdf = new jsPDF({ unit: "pt", format: "a4" }); // A4 for professional standard
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let y = 40;
+    const leftMargin = 40;
+    const lineHeight = 18;
 
-  // Small HALO branding at the top
-  pdf.setFontSize(12);
-  pdf.setTextColor("#1E3A8A"); // Dark blue
-  pdf.setFont(undefined, "bold");
-  pdf.text("HALO - Health Automated Logging Operator", leftMargin, y);
-  y += 30;
+    const addPageIfNeeded = (extraHeight = 0) => {
+      if (y + extraHeight > pageHeight - 40) {
+        pdf.addPage();
+        y = 40;
+      }
+    };
 
-  // Title
-  pdf.setFontSize(20);
-  pdf.setTextColor("#000");
-  pdf.setFont(undefined, "bold");
-  pdf.text(`Session with ${patient?.name || "Patient"}`, leftMargin, y);
-  y += 30;
-
-  // Session Times
-  pdf.setFontSize(12);
-  pdf.setFont(undefined, "normal");
-  if (startedAt) {
-    pdf.text(`Session started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, leftMargin, y);
-    y += 20;
-  }
-  if (lastUsedAt) {
-    pdf.text(`Last updated: ${new Date(lastUsedAt.toDate?.() || lastUsedAt).toLocaleString()}`, leftMargin, y);
-    y += 30;
-  }
-
-  // Draw a simple horizontal divider
-  pdf.setDrawColor("#ccc");
-  pdf.line(leftMargin, y, pageWidth - leftMargin, y);
-  y += 20;
-
-  const addSection = (title, text, color = "#333") => {
-    if (!text.trim()) return;
-
-    pdf.setFont(undefined, "bold");
-    pdf.setFontSize(14);
-    pdf.setTextColor(color);
-    pdf.text(title, leftMargin, y);
-    y += 20;
-
-    pdf.setFont(undefined, "normal");
+    // Small HALO branding at the top
     pdf.setFontSize(12);
+    pdf.setTextColor("#1E3A8A"); // Dark blue
+    pdf.setFont(undefined, "bold");
+    pdf.text("HALO - Health Automated Logging Operator", leftMargin, y);
+    y += 30;
+
+    // Title
+    pdf.setFontSize(20);
     pdf.setTextColor("#000");
+    pdf.setFont(undefined, "bold");
+    pdf.text(`Session with ${patient?.name || "Patient"}`, leftMargin, y);
+    y += 30;
 
-    const wrappedText = pdf.splitTextToSize(text, pageWidth - 2 * leftMargin);
-    wrappedText.forEach((line) => {
-      addPageIfNeeded(lineHeight);
-      pdf.text(line, leftMargin, y);
-      y += lineHeight;
-    });
+    // Session Times
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, "normal");
+    if (startedAt) {
+      pdf.text(`Session started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, leftMargin, y);
+      y += 20;
+    }
+    if (lastUsedAt) {
+      pdf.text(`Last updated: ${new Date(lastUsedAt.toDate?.() || lastUsedAt).toLocaleString()}`, leftMargin, y);
+      y += 30;
+    }
 
-    y += 20; // Add extra space after section
+    // Draw a simple horizontal divider
+    pdf.setDrawColor("#ccc");
+    pdf.line(leftMargin, y, pageWidth - leftMargin, y);
+    y += 20;
+
+    const addSection = (title, text, color = "#333") => {
+      if (!text.trim()) return;
+
+      pdf.setFont(undefined, "bold");
+      pdf.setFontSize(14);
+      pdf.setTextColor(color);
+      pdf.text(title, leftMargin, y);
+      y += 20;
+
+      pdf.setFont(undefined, "normal");
+      pdf.setFontSize(12);
+      pdf.setTextColor("#000");
+
+      const wrappedText = pdf.splitTextToSize(text, pageWidth - 2 * leftMargin);
+      wrappedText.forEach((line) => {
+        addPageIfNeeded(lineHeight);
+        pdf.text(line, leftMargin, y);
+        y += lineHeight;
+      });
+
+      y += 20; // Add extra space after section
+    };
+
+    // Split DAR note into sections
+    const extractSection = (sectionName) => {
+      const regex = new RegExp(`\\*\\*${sectionName}:\\*\\*\\s*([\\s\\S]*?)(?=\\n\\*\\*|$)`, "i");
+      const match = darNote.match(regex);
+      return match ? match[1].trim() : "";
+    };
+
+    const dataSection = extractSection("D \\(Data\\)");
+    const actionSection = extractSection("A \\(Action\\)");
+    const responseSection = extractSection("R \\(Response\\)");
+
+    // Add each section nicely
+    addSection("Data", dataSection, "#1E3A8A"); // Blue
+    addSection("Action", actionSection, "#047857"); // Green
+    addSection("Response", responseSection, "#B45309"); // Amber
+
+    // Nurse Notes
+    if (sessionNotes && sessionNotes.trim()) {
+      addSection("Nurse Notes", sessionNotes, "#0D9488"); // Teal
+    }
+
+    pdf.save(`${patient?.name || "HALO_Patient"}_Session_Report.pdf`);
   };
-
-  // Split DAR note into sections
-  const extractSection = (sectionName) => {
-    const regex = new RegExp(`\\*\\*${sectionName}:\\*\\*\\s*([\\s\\S]*?)(?=\\n\\*\\*|$)`, "i");
-    const match = darNote.match(regex);
-    return match ? match[1].trim() : "";
-  };
-
-  const dataSection = extractSection("D \\(Data\\)");
-  const actionSection = extractSection("A \\(Action\\)");
-  const responseSection = extractSection("R \\(Response\\)");
-
-  // Add each section nicely
-  addSection("Data", dataSection, "#1E3A8A"); // Blue
-  addSection("Action", actionSection, "#047857"); // Green
-  addSection("Response", responseSection, "#B45309"); // Amber
-
-  // Nurse Notes
-  if (sessionNotes && sessionNotes.trim()) {
-    addSection("Nurse Notes", sessionNotes, "#0D9488"); // Teal
-  }
-
-  pdf.save(`${patient?.name || "HALO_Patient"}_Session_Report.pdf`);
-};
 
   const handleNotesChange = async (e) => {
     const value = e.target.value;
@@ -303,9 +302,9 @@ const handleExport = async () => {
     });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${patient?.name || "HALO_Patient"}_FHIR_Document.json`;
+    link.download = `${patient?.name?.replace(/\s+/g, '_') || "HALO_Patient"}_FHIR_Document.json`;
     link.click();
-  };
+  };  
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
@@ -330,7 +329,7 @@ const handleExport = async () => {
           </div>
         )}
       </div>
-  
+
       <div className="border rounded-lg p-4 bg-gray-50 h-[300px] overflow-y-auto shadow-sm">
         {messages.map((msg) => (
           <ChatMessage key={msg.id} msg={msg} patientId={patientId} sessionId={sessionId} />
@@ -341,13 +340,13 @@ const handleExport = async () => {
           </p>
         )}
       </div>
-  
+
       {liveTranscript && (
         <div className="bg-white border rounded-lg p-3 text-sm shadow-sm">
           <span className="font-semibold text-gray-600">Transcript:</span> {liveTranscript}
         </div>
       )}
-  
+
       <div className="flex gap-2 flex-wrap">
         <input
           className="flex-1 min-w-[150px] border border-gray-300 p-3 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -356,14 +355,14 @@ const handleExport = async () => {
           onKeyDown={(e) => e.key === "Enter" && sendMessage(chatInput)}
           placeholder="Type message..."
         />
-        <button 
+        <button
           onClick={() => sendMessage(chatInput)}
           className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg text-sm font-medium shadow transition"
         >
           Send
         </button>
       </div>
-  
+
       <VoiceToggle
         recognizing={recognizing}
         speaker={speaker}
@@ -371,7 +370,7 @@ const handleExport = async () => {
         onStart={startRecognition}
         onStop={stopRecognition}
       />
-  
+
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={handleGenerateSummary}
@@ -380,14 +379,14 @@ const handleExport = async () => {
         >
           {loadingSummary ? "Generating..." : "Generate Summary"}
         </button>
-  
+
         <button
           onClick={handleExport}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-lg text-sm font-medium transition"
         >
           Export PDF
         </button>
-  
+
         {darNote && (
           <>
             <button
@@ -405,27 +404,33 @@ const handleExport = async () => {
           </>
         )}
       </div>
-  
+
       <SummaryViewer darNote={darNote} generatedAt={generatedAt} />
-  
+
       {showFHIR && fhirDocument && (
-        <div className="bg-white border rounded-lg p-4 text-xs text-gray-800 overflow-x-auto max-h-96 shadow-sm">
-          <h3 className="font-semibold text-sm text-blue-700 mb-2">FHIR DocumentReference</h3>
-          <pre>{JSON.stringify(fhirDocument, null, 2)}</pre>
-  
-          {fhirDocument.content?.[1]?.attachment?.url && (
-            <div className="mt-4 text-sm">
-              <h4 className="font-semibold mb-1">Decoded Note Preview</h4>
-              <iframe
-                title="Decoded DAR Preview"
-                src={fhirDocument.content[1].attachment.url}
-                className="w-full h-60 border rounded"
-              ></iframe>
-            </div>
-          )}
+        <div className="bg-white border rounded-lg p-6 text-sm text-gray-700 overflow-x-auto shadow-sm mt-6">
+          <h3 className="text-lg font-bold text-blue-700 mb-4">FHIR DocumentReference Preview</h3>
+
+          <div className="bg-gray-100 p-4 rounded overflow-x-auto text-xs font-mono whitespace-pre-wrap leading-relaxed">
+            <pre>{JSON.stringify(fhirDocument, null, 2)}</pre>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-4">
+            <button
+              onClick={handleDownloadFHIR}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            >
+              Download FHIR JSON
+            </button>
+            {/* (Optional future button for sandbox sending) */}
+            {/* <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+        Send to FHIR Sandbox
+      </button> */}
+          </div>
         </div>
       )}
-  
+
+
       <div>
         <h3 className="text-lg font-semibold text-green-700 mb-2">Nurse Notes</h3>
         <textarea
@@ -436,5 +441,5 @@ const handleExport = async () => {
         />
       </div>
     </div>
-  );  
+  );
 }
