@@ -18,7 +18,7 @@ export default function generateFHIRDocument({ darNote, patient, generatedAt }) 
       ]
     },
     subject: {
-      reference: `Patient/${patient?.id || "unknown"}`,
+      reference: "Patient/example",
       display: patient?.name || "Patient"
     },
     date: generatedAt || new Date().toISOString(),
