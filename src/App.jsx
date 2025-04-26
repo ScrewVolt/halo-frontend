@@ -36,7 +36,17 @@ export default function App() {
 
   return (
     <>
-      <Toaster />
+      <Toaster
+        toastOptions={{
+          style: {
+            background: "#fff",
+            color: "#333",
+            fontSize: "14px",
+            padding: "12px",
+          },
+        }}
+      />
+
       <Routes>
         {/* All protected under MainLayout */}
         <Route
