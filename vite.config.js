@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['offline.html', 'offline.css', 'favicon.ico', 'icon-192x192.png', 'icon-512x512.png'],
       manifest: {
         name: 'HALO - Health Automated Logging Operator',
         short_name: 'HALO',
@@ -30,13 +31,14 @@ export default defineConfig({
         ]
       },
       workbox: {
-        navigateFallback: '/offline.html',  // ✅ fallback if offline
+        navigateFallback: '/offline.html',
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        clientsClaim: true,        // ✅ Add this
+        skipWaiting: true          // ✅ Add this
       },
       devOptions: {
         enabled: true,
-      },
-      includeAssets: ['offline.html', 'offline.css'], // ✅ Add this line
-    })    
+      }
+    })
   ]
 });
