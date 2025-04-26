@@ -187,7 +187,6 @@ export default function SessionEntry() {
     }
   };
 
-
   const handleExport = async () => {
     if (!darNote.trim()) {
       toast.error("No DAR note available to export!");
@@ -199,78 +198,115 @@ export default function SessionEntry() {
       return;
     }
 
-    const pdf = new jsPDF();
-    const margin = 20;
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "letter", // Standard hospital format (8.5x11 inches)
+    });
+
+    const margin = 40;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const maxTextWidth = pageWidth - margin * 2;
     let y = margin;
 
     // Title
-    pdf.setFontSize(20);
-    pdf.setTextColor(30, 58, 138); // Blue
+    pdf.setFontSize(22);
+    pdf.setTextColor(30, 58, 138); // HALO Blue
     pdf.text("HALO - Session Report", margin, y);
-    y += 30;
+    y += 40;
 
     // Patient Info
-    pdf.setFontSize(12);
+    pdf.setFontSize(13);
     pdf.setTextColor(0, 0, 0);
     if (patient?.name) pdf.text(`Patient: ${patient.name}`, margin, y);
-    if (patient?.room) pdf.text(`Room #: ${patient.room}`, margin + 200, y);
+    if (patient?.room) pdf.text(`Room #: ${patient.room}`, margin + 250, y);
     y += 20;
-    if (startedAt) pdf.text(`Session Started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, margin, y);
+    if (startedAt) {
+      pdf.text(`Session Started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, margin, y);
+      y += 20;
+    }
+
+    // Divider
+    pdf.setDrawColor(180);
+    pdf.line(margin, y, pageWidth - margin, y);
     y += 20;
 
-    // DAR Note Section
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.5);
-    pdf.line(margin, y, 570, y);
-    y += 15;
-
-    pdf.setFontSize(14);
+    // AI-Generated DAR Note
+    pdf.setFontSize(16);
     pdf.setTextColor(80, 80, 80);
     pdf.text("AI-Generated DAR Note", margin, y);
-    y += 15;
+    y += 25;
 
-    pdf.setFontSize(11);
-    const darLines = pdf.splitTextToSize(darNote, 560);
-    darLines.forEach(line => {
-      if (y > 780) {
-        pdf.addPage();
-        y = margin;
-      }
-      pdf.text(line, margin, y);
-      y += 14;
-    });
+    // Draw DAR boxes
+    const parseSection = (sectionTitle, text) => {
+      if (!text) return;
 
-    // Nurse Notes Section
+      pdf.setFillColor(240, 245, 255); // Light blue background
+      const boxHeight = 24;
+      pdf.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 5, 5, "F");
+      pdf.setFontSize(13);
+      pdf.setTextColor(30, 58, 138);
+      pdf.text(sectionTitle, margin + 10, y + 17);
+      y += boxHeight + 10;
+
+      pdf.setFontSize(12);
+      pdf.setTextColor(60, 60, 60);
+
+      const lines = pdf.splitTextToSize(text, maxTextWidth);
+      lines.forEach((line) => {
+        if (y > 750) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += 16;
+      });
+
+      y += 10;
+    };
+
+    // Parsing from your markdown-style note
+    const dataMatch = darNote.match(/\*\*D \(Data\):\*\*(.*?)(?=\*\*A|\*\*R|$)/s);
+    const actionMatch = darNote.match(/\*\*A \(Action\):\*\*(.*?)(?=\*\*R|$)/s);
+    const responseMatch = darNote.match(/\*\*R \(Response\):\*\*(.*)/s);
+
+    parseSection("D (Data)", dataMatch ? dataMatch[1].trim() : "");
+    parseSection("A (Action)", actionMatch ? actionMatch[1].trim() : "");
+    parseSection("R (Response)", responseMatch ? responseMatch[1].trim() : "");
+
+    // Optional: Nurse Notes
     if (sessionNotes.trim()) {
       if (y > 700) {
         pdf.addPage();
         y = margin;
       }
 
-      y += 20;
-      pdf.setDrawColor(0, 0, 0);
-      pdf.line(margin, y, 570, y);
-      y += 15;
+      pdf.setFillColor(220, 250, 220); // Light green background
+      const boxHeight = 24;
+      pdf.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 5, 5, "F");
+      pdf.setFontSize(13);
+      pdf.setTextColor(34, 139, 34); // Green text
+      pdf.text("Nurse Notes", margin + 10, y + 17);
+      y += boxHeight + 10;
 
-      pdf.setFontSize(14);
-      pdf.text("Nurse Notes", margin, y);
-      y += 15;
+      pdf.setFontSize(12);
+      pdf.setTextColor(60, 60, 60);
 
-      pdf.setFontSize(11);
-      const notesLines = pdf.splitTextToSize(sessionNotes, 560);
-      notesLines.forEach(line => {
-        if (y > 780) {
+      const notesLines = pdf.splitTextToSize(sessionNotes, maxTextWidth);
+      notesLines.forEach((line) => {
+        if (y > 750) {
           pdf.addPage();
           y = margin;
         }
         pdf.text(line, margin, y);
-        y += 14;
+        y += 16;
       });
     }
 
     pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
     toast.success("✅ PDF exported successfully!");
   };
+
 
   const handleNotesChange = async (e) => {
     const value = e.target.value;
