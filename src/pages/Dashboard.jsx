@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
-import { useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp, } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function Dashboard() {
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
+  const [notes, setNotes] = useState("");
 
   const user = auth.currentUser;
-
   const navigate = useNavigate();
+
   const {
     patients,
     setPatients,
@@ -21,7 +21,6 @@ export default function Dashboard() {
   const filteredPatients = patients.filter((p) =>
     (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
-
 
   useEffect(() => {
     if (!user) return;
@@ -39,14 +38,17 @@ export default function Dashboard() {
     await addDoc(ref, {
       name: name.trim(),
       room: room.trim(),
+      notes: notes.trim() || "",
       createdAt: serverTimestamp(),
+      safeMode: true,
     });
     setName("");
     setRoom("");
+    setNotes("");
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
+    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold text-blue-800 mb-4">Patient Dashboard</h1>
 
@@ -71,6 +73,14 @@ export default function Dashboard() {
           </button>
         </div>
 
+        <textarea
+          className="w-full border border-gray-300 p-3 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+          placeholder="Optional Notes (e.g., reason for visit, allergies, instructions)"
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+
         <div className="grid gap-4 mt-6">
           {filteredPatients.map((p) => (
             <div
@@ -84,6 +94,11 @@ export default function Dashboard() {
               <h2 className="text-lg font-bold text-gray-800">{p.name}</h2>
               {p.room && (
                 <p className="text-sm text-gray-500 mt-1">Room {p.room}</p>
+              )}
+              {p.notes && (
+                <p className="text-xs text-gray-400 mt-1 italic">
+                  {p.notes.length > 60 ? p.notes.slice(0, 60) + "..." : p.notes}
+                </p>
               )}
             </div>
           ))}
