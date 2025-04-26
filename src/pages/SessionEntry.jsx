@@ -187,35 +187,99 @@ export default function SessionEntry() {
     }
   };
 
-  const handleExport = async () => {
-    const pdf = new jsPDF();
-    pdf.text(`Session with ${patient?.name || "Patient"}`, 20, 30);
+  
+const handleExport = async () => {
+  const pdf = new jsPDF({ unit: "pt", format: "a4" }); // A4 for professional standard
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  let y = 40;
+  const leftMargin = 40;
+  const lineHeight = 18;
 
-    let y = 60;
-    messages.forEach((msg) => {
-      pdf.text(msg.text, 20, y);
-      y += 20;
+  const addPageIfNeeded = (extraHeight = 0) => {
+    if (y + extraHeight > pageHeight - 40) {
+      pdf.addPage();
+      y = 40;
+    }
+  };
+
+  // Small HALO branding at the top
+  pdf.setFontSize(12);
+  pdf.setTextColor("#1E3A8A"); // Dark blue
+  pdf.setFont(undefined, "bold");
+  pdf.text("HALO - Health Automated Logging Operator", leftMargin, y);
+  y += 30;
+
+  // Title
+  pdf.setFontSize(20);
+  pdf.setTextColor("#000");
+  pdf.setFont(undefined, "bold");
+  pdf.text(`Session with ${patient?.name || "Patient"}`, leftMargin, y);
+  y += 30;
+
+  // Session Times
+  pdf.setFontSize(12);
+  pdf.setFont(undefined, "normal");
+  if (startedAt) {
+    pdf.text(`Session started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, leftMargin, y);
+    y += 20;
+  }
+  if (lastUsedAt) {
+    pdf.text(`Last updated: ${new Date(lastUsedAt.toDate?.() || lastUsedAt).toLocaleString()}`, leftMargin, y);
+    y += 30;
+  }
+
+  // Draw a simple horizontal divider
+  pdf.setDrawColor("#ccc");
+  pdf.line(leftMargin, y, pageWidth - leftMargin, y);
+  y += 20;
+
+  const addSection = (title, text, color = "#333") => {
+    if (!text.trim()) return;
+
+    pdf.setFont(undefined, "bold");
+    pdf.setFontSize(14);
+    pdf.setTextColor(color);
+    pdf.text(title, leftMargin, y);
+    y += 20;
+
+    pdf.setFont(undefined, "normal");
+    pdf.setFontSize(12);
+    pdf.setTextColor("#000");
+
+    const wrappedText = pdf.splitTextToSize(text, pageWidth - 2 * leftMargin);
+    wrappedText.forEach((line) => {
+      addPageIfNeeded(lineHeight);
+      pdf.text(line, leftMargin, y);
+      y += lineHeight;
     });
 
-    if (darNote) {
-      y += 20;
-      pdf.text("AI-Generated DAR Note:", 20, y);
-      y += 20;
-      const lines = pdf.splitTextToSize(darNote, 170);
-      pdf.text(lines, 20, y);
-      y += lines.length * 10;
-    }
-
-    if (sessionNotes) {
-      y += 20;
-      pdf.text("Nurse Notes:", 20, y);
-      y += 20;
-      const lines = pdf.splitTextToSize(sessionNotes, 170);
-      pdf.text(lines, 20, y);
-    }
-
-    pdf.save(`${patient?.name || "Patient"}_session.pdf`);
+    y += 20; // Add extra space after section
   };
+
+  // Split DAR note into sections
+  const extractSection = (sectionName) => {
+    const regex = new RegExp(`\\*\\*${sectionName}:\\*\\*\\s*([\\s\\S]*?)(?=\\n\\*\\*|$)`, "i");
+    const match = darNote.match(regex);
+    return match ? match[1].trim() : "";
+  };
+
+  const dataSection = extractSection("D \\(Data\\)");
+  const actionSection = extractSection("A \\(Action\\)");
+  const responseSection = extractSection("R \\(Response\\)");
+
+  // Add each section nicely
+  addSection("Data", dataSection, "#1E3A8A"); // Blue
+  addSection("Action", actionSection, "#047857"); // Green
+  addSection("Response", responseSection, "#B45309"); // Amber
+
+  // Nurse Notes
+  if (sessionNotes && sessionNotes.trim()) {
+    addSection("Nurse Notes", sessionNotes, "#0D9488"); // Teal
+  }
+
+  pdf.save(`${patient?.name || "HALO_Patient"}_Session_Report.pdf`);
+};
 
   const handleNotesChange = async (e) => {
     const value = e.target.value;
