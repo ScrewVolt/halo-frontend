@@ -334,14 +334,9 @@ export default function SessionEntry() {
     link.click();
   };
 
-  const handleSendToSandbox = async () => {
+  const handleSendFHIR = async () => {
     if (!fhirDocument) {
-      toast.error("No FHIR Document available!");
-      return;
-    }
-
-    if (!navigator.onLine) {
-      toast.error("Cannot send to sandbox while offline.");
+      toast.error("No FHIR document available to send!");
       return;
     }
 
@@ -354,17 +349,17 @@ export default function SessionEntry() {
         body: JSON.stringify(fhirDocument),
       });
 
-      if (res.ok) {
-        toast.success("✅ Sent successfully to FHIR Sandbox!");
-      } else {
-        console.error(await res.text());
-        toast.error("❌ Failed to send to FHIR Sandbox (server error).");
+      if (!res.ok) {
+        throw new Error("Failed to send to sandbox");
       }
+
+      toast.success("✅ Successfully sent to Sandbox!");
     } catch (err) {
-      console.error(err);
-      toast.error("❌ Failed to send to FHIR Sandbox (connection error).");
+      console.error("❌ Failed to send to sandbox:", err);
+      toast.error("❌ Could not send to Sandbox. Please check connection or try again.");
     }
   };
+
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
@@ -464,11 +459,12 @@ export default function SessionEntry() {
               Download FHIR JSON
             </button>
             <button
-              onClick={handleSendToSandbox}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              onClick={handleSendFHIR}
+              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded shadow transition"
             >
-              Send to FHIR Sandbox
+              Send to Sandbox
             </button>
+
           </>
         )}
       </div>
@@ -492,11 +488,12 @@ export default function SessionEntry() {
               Download FHIR JSON
             </button>
             <button
-              onClick={handleSendToSandbox}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+              onClick={handleSendFHIR}
+              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded shadow transition"
             >
-              Send to FHIR Sandbox
+              Send to Sandbox
             </button>
+
           </div>
         </div>
       )}
