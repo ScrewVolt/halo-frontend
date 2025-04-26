@@ -26,15 +26,35 @@ export default function App() {
   return (
     <>
       <Toaster
+        position="top-center"
         toastOptions={{
+          duration: 4000,
           style: {
-            background: "#fff",
-            color: "#333",
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            padding: "14px",
             fontSize: "14px",
-            padding: "12px",
+            color: "#1e40af", // Tailwind blue-800
+            borderRadius: "12px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+          },
+          success: {
+            style: {
+              background: "#e0f2fe", // Light blue success
+              color: "#075985",       // Darker blue text
+              border: "1px solid #7dd3fc",
+            },
+          },
+          error: {
+            style: {
+              background: "#fee2e2", // Light red error
+              color: "#991b1b",       // Darker red text
+              border: "1px solid #fca5a5",
+            },
           },
         }}
       />
+
 
       {user === undefined ? (
         <div className="h-screen flex items-center justify-center text-blue-700 text-xl font-semibold">
