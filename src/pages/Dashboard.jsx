@@ -46,7 +46,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
       <div>
         <h1 className="text-3xl font-bold text-blue-800 mb-4">Patient Dashboard</h1>
 

@@ -308,7 +308,7 @@ const handleExport = async () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
       <div>
         <h1 className="text-3xl font-bold text-blue-800 mb-2">
           Session with {patient?.name || "Patient"}
@@ -356,7 +356,7 @@ const handleExport = async () => {
           onKeyDown={(e) => e.key === "Enter" && sendMessage(chatInput)}
           placeholder="Type message..."
         />
-        <button
+        <button 
           onClick={() => sendMessage(chatInput)}
           className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg text-sm font-medium shadow transition"
         >
