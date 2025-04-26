@@ -1,5 +1,5 @@
-export default function generateFHIRDocument({ darNote, patient, generatedAt }) {
-  if (!darNote || !patient) return null;
+export default function generateFHIRDocument({ darNote, generatedAt }) {
+  if (!darNote) return null; // Patient optional temporarily
 
   const now = generatedAt || new Date().toISOString();
 
@@ -15,10 +15,7 @@ export default function generateFHIRDocument({ darNote, patient, generatedAt }) 
         }
       ]
     },
-    subject: {
-      reference: `Patient/${patient.id || "example"}`,
-      display: patient.name || "Patient"
-    },
+    // ❌ REMOVE subject field
     date: now,
     description: "AI-generated DAR nursing note.",
     content: [
@@ -27,7 +24,7 @@ export default function generateFHIRDocument({ darNote, patient, generatedAt }) 
           contentType: "text/plain",
           title: "Nursing DAR Note",
           language: "en",
-          url: "https://halo-hospital.netlify.app/sample-dar-note.txt" // ✅ TEMPORARY LINK
+          url: "https://halo-hospital.netlify.app/sample-dar-note.txt" // Replace with real file later if needed
         }
       }
     ]
