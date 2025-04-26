@@ -21,7 +21,7 @@ export default function Dashboard() {
   const filteredPatients = patients.filter((p) =>
     (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
 
   useEffect(() => {
     if (!user) return;
@@ -49,7 +49,7 @@ export default function Dashboard() {
     <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold text-blue-800 mb-4">Patient Dashboard</h1>
-  
+
         <div className="flex flex-wrap gap-3 md:gap-4">
           <input
             className="flex-1 min-w-[150px] border border-gray-300 p-3 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -70,26 +70,26 @@ export default function Dashboard() {
             + Add
           </button>
         </div>
-  
+
         <div className="grid gap-4 mt-6">
-  {filteredPatients.map((p) => (
-    <div
-      key={p.id}
-      className="border rounded-lg p-4 bg-white hover:bg-gray-50 shadow-sm cursor-pointer transition"
-      onClick={() => {
-        setSelectedPatient(p);
-        navigate(`/visit/${p.id}`);
-      }}
-    >
-      <h2 className="text-lg font-bold text-gray-800">{p.name}</h2>
-      {p.room && (
-        <p className="text-sm text-gray-500 mt-1">Room {p.room}</p>
-      )}
-    </div>
-  ))}
-</div>
+          {filteredPatients.map((p) => (
+            <div
+              key={p.id}
+              className="border rounded-lg p-4 bg-white hover:bg-gray-50 shadow-sm cursor-pointer transition"
+              onClick={() => {
+                setSelectedPatient(p);
+                navigate(`/visit/${p.id}`);
+              }}
+            >
+              <h2 className="text-lg font-bold text-gray-800">{p.name}</h2>
+              {p.room && (
+                <p className="text-sm text-gray-500 mt-1">Room {p.room}</p>
+              )}
+            </div>
+          ))}
+        </div>
 
       </div>
     </div>
-  );  
+  );
 }
