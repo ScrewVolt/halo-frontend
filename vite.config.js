@@ -30,12 +30,13 @@ export default defineConfig({
         ]
       },
       workbox: {
-        navigateFallback: '/offline.html', // ✅ add fallback to offline page
+        navigateFallback: '/offline.html',  // ✅ fallback if offline
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
       devOptions: {
-        enabled: true, // ✅ allow testing PWA behavior in dev mode too
-      }
-    })
+        enabled: true,
+      },
+      includeAssets: ['offline.html', 'offline.css'], // ✅ Add this line
+    })    
   ]
 });
