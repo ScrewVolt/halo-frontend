@@ -20,20 +20,6 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  if (user === undefined) {
-    // Loading state while checking
-    return (
-      <div className="h-screen flex items-center justify-center text-blue-700 text-xl font-semibold">
-        Checking login...
-      </div>
-    );
-  }
-
-  if (!user) {
-    // Not logged in, show login modal
-    return <LoginModal onLogin={setUser} />;
-  }
-
   return (
     <>
       <Toaster
@@ -47,23 +33,31 @@ export default function App() {
         }}
       />
 
-      <Routes>
-        {/* All protected under MainLayout */}
-        <Route
-          element={
-            <RequireAuth>
-              <MainLayout />
-            </RequireAuth>
-          }
-        >
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/visit/:id" element={<VisitHistory />} />
-          <Route path="/visit/:id/session/:sessionId" element={<SessionEntry />} />
-        </Route>
+      {user === undefined ? (
+        <div className="h-screen flex items-center justify-center text-blue-700 text-xl font-semibold">
+          Checking login...
+        </div>
+      ) : !user ? (
+        <LoginModal onLogin={setUser} />
+      ) : (
+        <Routes>
+          {/* All protected under MainLayout */}
+          <Route
+            element={
+              <RequireAuth>
+                <MainLayout />
+              </RequireAuth>
+            }
+          >
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/visit/:id" element={<VisitHistory />} />
+            <Route path="/visit/:id/session/:sessionId" element={<SessionEntry />} />
+          </Route>
 
-        {/* Fallback: if user manually types unknown route */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      )}
     </>
   );
 }
