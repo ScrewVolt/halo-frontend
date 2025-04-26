@@ -1,7 +1,9 @@
-export default function generateFHIRDocument({ darNote, generatedAt }) {
-  if (!darNote) return null; // Patient optional temporarily
+import { encode } from "js-base64";
 
-  const now = generatedAt || new Date().toISOString();
+export default function generateFHIRDocument({ darNote, patient, generatedAt }) {
+  if (!darNote) return null;
+
+  const base64Dar = encode(darNote);
 
   return {
     resourceType: "DocumentReference",
@@ -15,16 +17,17 @@ export default function generateFHIRDocument({ darNote, generatedAt }) {
         }
       ]
     },
-    // ❌ REMOVE subject field
-    date: now,
-    description: "AI-generated DAR nursing note.",
+    subject: {
+      reference: `Patient/${patient?.id || "unknown"}`,
+      display: patient?.name || "Patient"
+    },
+    date: generatedAt || new Date().toISOString(),
+    description: "AI-generated nursing DAR summary",
     content: [
       {
         attachment: {
-          contentType: "text/plain",
-          title: "Nursing DAR Note",
-          language: "en",
-          url: "https://halo-hospital.netlify.app/sample-dar-note.txt" // Replace with real file later if needed
+          contentType: "text/markdown",
+          data: base64Dar
         }
       }
     ]
