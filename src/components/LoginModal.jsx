@@ -22,7 +22,7 @@ export default function LoginModal({ onLogin }) {
       toast.success("Logged in successfully!");
     } catch (err) {
       console.error(err);
-      if (err.code === "auth/wrong-password" || err.code === "auth/user-not-found") {
+      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found") {
         toast.error("Invalid email or password.");
       } else if (err.code === "auth/too-many-requests") {
         toast.error("Too many failed attempts. Try again later.");
