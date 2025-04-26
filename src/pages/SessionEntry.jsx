@@ -17,6 +17,7 @@ import VoiceToggle from "../components/VoiceToggle";
 import SummaryViewer from "../components/SummaryViewer";
 import jsPDF from "jspdf";
 import generateFHIRDocument from "../utils/generateFHIRDocument";
+import toast from "react-hot-toast";
 
 export default function SessionEntry() {
   const { id: patientId, sessionId } = useParams();
@@ -304,7 +305,32 @@ export default function SessionEntry() {
     link.href = URL.createObjectURL(blob);
     link.download = `${patient?.name?.replace(/\s+/g, '_') || "HALO_Patient"}_FHIR_Document.json`;
     link.click();
-  };  
+  };
+
+  const handleSendToSandbox = async () => {
+    try {
+      const response = await fetch("https://hapi.fhir.org/baseR4/DocumentReference", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/fhir+json",
+        },
+        body: JSON.stringify(fhirDocument),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("✅ FHIR Sandbox Response:", data);
+
+      toast.success(`Document sent! ID: ${data.id || "unknown"}`);
+    } catch (err) {
+      console.error("❌ Failed to send to sandbox:", err);
+      toast.error("Failed to send to FHIR sandbox.");
+    }
+  };
+
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
@@ -422,10 +448,12 @@ export default function SessionEntry() {
             >
               Download FHIR JSON
             </button>
-            {/* (Optional future button for sandbox sending) */}
-            {/* <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
-        Send to FHIR Sandbox
-      </button> */}
+            <button
+              onClick={handleSendToSandbox}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            >
+              Send to FHIR Sandbox
+            </button>
           </div>
         </div>
       )}
