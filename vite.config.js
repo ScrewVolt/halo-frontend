@@ -30,7 +30,11 @@ export default defineConfig({
         ]
       },
       workbox: {
+        navigateFallback: '/offline.html', // ✅ add fallback to offline page
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+      },
+      devOptions: {
+        enabled: true, // ✅ allow testing PWA behavior in dev mode too
       }
     })
   ]
