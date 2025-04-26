@@ -10,7 +10,7 @@ export default function generateFHIRDocument({ darNote, patient, generatedAt }) 
       coding: [
         {
           system: "http://loinc.org",
-          code: "34108-1", // Outpatient Note
+          code: "34108-1",
           display: "Outpatient Note"
         }
       ]
@@ -24,10 +24,10 @@ export default function generateFHIRDocument({ darNote, patient, generatedAt }) 
     content: [
       {
         attachment: {
-          contentType: "text/markdown",
-          title: "Nursing DAR Note",  // ✅ REQUIRED by HAPI now
-          language: "en",             // ✅ Language must be defined
-          data: btoa(darNote)          // ✅ Base64-encoded text
+          contentType: "text/plain",    // ✅ CHANGED HERE
+          title: "Nursing DAR Note",
+          language: "en",
+          data: btoa(darNote)
         }
       }
     ]
