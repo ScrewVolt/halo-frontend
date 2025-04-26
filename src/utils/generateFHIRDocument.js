@@ -1,5 +1,3 @@
-// src/utils/generateFHIRdocument.js
-
 export default function generateFHIRDocument({ darNote, patient, generatedAt }) {
   if (!darNote || !patient) return null;
 
@@ -27,7 +25,9 @@ export default function generateFHIRDocument({ darNote, patient, generatedAt }) 
       {
         attachment: {
           contentType: "text/markdown",
-          data: btoa(darNote) // ✅ encode the DAR note properly into base64
+          title: "Nursing DAR Note",  // ✅ REQUIRED by HAPI now
+          language: "en",             // ✅ Language must be defined
+          data: btoa(darNote)          // ✅ Base64-encoded text
         }
       }
     ]
