@@ -9,10 +9,13 @@ import VisitHistory from "./pages/VisitHistory";
 import LoginModal from "./components/LoginModal";
 import MainLayout from "./layouts/MainLayout";
 import RequireAuth from "./components/RequireAuth";
+import useAutoLogout from "./hooks/useAutoLogout";  // ✅ Add this
+
 
 import { Toaster } from "react-hot-toast";
 
 export default function App() {
+  useAutoLogout();
   const [user, setUser] = useState(undefined); // initially undefined (checking)
 
   useEffect(() => {
