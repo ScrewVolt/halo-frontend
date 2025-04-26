@@ -1,25 +1,39 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 import toast from "react-hot-toast";
 
 export default function LoginModal({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState(""); // ✅ new
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) {
-      toast.error("Please enter both email and password.");
+    if (!email.trim() || !password.trim() || !inviteCode.trim()) {
+      toast.error("Please fill in all fields.");
       return;
     }
 
     setLoading(true);
     try {
+      // Validate invite code first
+      const inviteRef = doc(db, "inviteCodes", inviteCode.trim());
+      const inviteSnap = await getDoc(inviteRef);
+
+      if (!inviteSnap.exists()) {
+        toast.error("Invalid invite code.");
+        setLoading(false);
+        return;
+      }
+
+      // If code valid, proceed to normal login
       const result = await signInWithEmailAndPassword(auth, email, password);
       onLogin(result.user);
       toast.success("Logged in successfully!");
+
     } catch (err) {
       console.error(err);
       if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found") {
@@ -50,11 +64,21 @@ export default function LoginModal({ onLogin }) {
           className="w-full border p-2 rounded text-sm"
           required
         />
+
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
+          className="w-full border p-2 rounded text-sm"
+          required
+        />
+
+        <input
+          type="text"
+          value={inviteCode}
+          onChange={(e) => setInviteCode(e.target.value)}
+          placeholder="Invite Code"
           className="w-full border p-2 rounded text-sm"
           required
         />
