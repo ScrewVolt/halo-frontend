@@ -189,96 +189,87 @@ export default function SessionEntry() {
 
 
   const handleExport = async () => {
-    const pdf = new jsPDF({ unit: "pt", format: "a4" }); // A4 for professional standard
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    let y = 40;
-    const leftMargin = 40;
-    const lineHeight = 18;
+    if (!darNote.trim()) {
+      toast.error("No DAR note available to export!");
+      return;
+    }
 
-    const addPageIfNeeded = (extraHeight = 0) => {
-      if (y + extraHeight > pageHeight - 40) {
-        pdf.addPage();
-        y = 40;
-      }
-    };
+    if (!navigator.onLine) {
+      toast.error("Cannot export while offline.");
+      return;
+    }
 
-    // Small HALO branding at the top
-    pdf.setFontSize(12);
-    pdf.setTextColor("#1E3A8A"); // Dark blue
-    pdf.setFont(undefined, "bold");
-    pdf.text("HALO - Health Automated Logging Operator", leftMargin, y);
-    y += 30;
+    const pdf = new jsPDF();
+    const margin = 20;
+    let y = margin;
 
     // Title
     pdf.setFontSize(20);
-    pdf.setTextColor("#000");
-    pdf.setFont(undefined, "bold");
-    pdf.text(`Session with ${patient?.name || "Patient"}`, leftMargin, y);
+    pdf.setTextColor(30, 58, 138); // Blue
+    pdf.text("HALO - Session Report", margin, y);
     y += 30;
 
-    // Session Times
+    // Patient Info
     pdf.setFontSize(12);
-    pdf.setFont(undefined, "normal");
-    if (startedAt) {
-      pdf.text(`Session started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, leftMargin, y);
-      y += 20;
-    }
-    if (lastUsedAt) {
-      pdf.text(`Last updated: ${new Date(lastUsedAt.toDate?.() || lastUsedAt).toLocaleString()}`, leftMargin, y);
-      y += 30;
-    }
-
-    // Draw a simple horizontal divider
-    pdf.setDrawColor("#ccc");
-    pdf.line(leftMargin, y, pageWidth - leftMargin, y);
+    pdf.setTextColor(0, 0, 0);
+    if (patient?.name) pdf.text(`Patient: ${patient.name}`, margin, y);
+    if (patient?.room) pdf.text(`Room #: ${patient.room}`, margin + 200, y);
+    y += 20;
+    if (startedAt) pdf.text(`Session Started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, margin, y);
     y += 20;
 
-    const addSection = (title, text, color = "#333") => {
-      if (!text.trim()) return;
+    // DAR Note Section
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, y, 570, y);
+    y += 15;
 
-      pdf.setFont(undefined, "bold");
-      pdf.setFontSize(14);
-      pdf.setTextColor(color);
-      pdf.text(title, leftMargin, y);
+    pdf.setFontSize(14);
+    pdf.setTextColor(80, 80, 80);
+    pdf.text("AI-Generated DAR Note", margin, y);
+    y += 15;
+
+    pdf.setFontSize(11);
+    const darLines = pdf.splitTextToSize(darNote, 560);
+    darLines.forEach(line => {
+      if (y > 780) {
+        pdf.addPage();
+        y = margin;
+      }
+      pdf.text(line, margin, y);
+      y += 14;
+    });
+
+    // Nurse Notes Section
+    if (sessionNotes.trim()) {
+      if (y > 700) {
+        pdf.addPage();
+        y = margin;
+      }
+
       y += 20;
+      pdf.setDrawColor(0, 0, 0);
+      pdf.line(margin, y, 570, y);
+      y += 15;
 
-      pdf.setFont(undefined, "normal");
-      pdf.setFontSize(12);
-      pdf.setTextColor("#000");
+      pdf.setFontSize(14);
+      pdf.text("Nurse Notes", margin, y);
+      y += 15;
 
-      const wrappedText = pdf.splitTextToSize(text, pageWidth - 2 * leftMargin);
-      wrappedText.forEach((line) => {
-        addPageIfNeeded(lineHeight);
-        pdf.text(line, leftMargin, y);
-        y += lineHeight;
+      pdf.setFontSize(11);
+      const notesLines = pdf.splitTextToSize(sessionNotes, 560);
+      notesLines.forEach(line => {
+        if (y > 780) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += 14;
       });
-
-      y += 20; // Add extra space after section
-    };
-
-    // Split DAR note into sections
-    const extractSection = (sectionName) => {
-      const regex = new RegExp(`\\*\\*${sectionName}:\\*\\*\\s*([\\s\\S]*?)(?=\\n\\*\\*|$)`, "i");
-      const match = darNote.match(regex);
-      return match ? match[1].trim() : "";
-    };
-
-    const dataSection = extractSection("D \\(Data\\)");
-    const actionSection = extractSection("A \\(Action\\)");
-    const responseSection = extractSection("R \\(Response\\)");
-
-    // Add each section nicely
-    addSection("Data", dataSection, "#1E3A8A"); // Blue
-    addSection("Action", actionSection, "#047857"); // Green
-    addSection("Response", responseSection, "#B45309"); // Amber
-
-    // Nurse Notes
-    if (sessionNotes && sessionNotes.trim()) {
-      addSection("Nurse Notes", sessionNotes, "#0D9488"); // Teal
     }
 
-    pdf.save(`${patient?.name || "HALO_Patient"}_Session_Report.pdf`);
+    pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
+    toast.success("✅ PDF exported successfully!");
   };
 
   const handleNotesChange = async (e) => {
@@ -308,8 +299,18 @@ export default function SessionEntry() {
   };
 
   const handleSendToSandbox = async () => {
+    if (!fhirDocument) {
+      toast.error("No FHIR Document available!");
+      return;
+    }
+
+    if (!navigator.onLine) {
+      toast.error("Cannot send to sandbox while offline.");
+      return;
+    }
+
     try {
-      const response = await fetch("https://hapi.fhir.org/baseR4/DocumentReference", {
+      const res = await fetch("https://hapi.fhir.org/baseR4/DocumentReference", {
         method: "POST",
         headers: {
           "Content-Type": "application/fhir+json",
@@ -317,20 +318,17 @@ export default function SessionEntry() {
         body: JSON.stringify(fhirDocument),
       });
 
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
+      if (res.ok) {
+        toast.success("✅ Sent successfully to FHIR Sandbox!");
+      } else {
+        console.error(await res.text());
+        toast.error("❌ Failed to send to FHIR Sandbox (server error).");
       }
-
-      const data = await response.json();
-      console.log("✅ FHIR Sandbox Response:", data);
-
-      toast.success(`Document sent! ID: ${data.id || "unknown"}`);
     } catch (err) {
-      console.error("❌ Failed to send to sandbox:", err);
-      toast.error("Failed to send to FHIR sandbox.");
+      console.error(err);
+      toast.error("❌ Failed to send to FHIR Sandbox (connection error).");
     }
   };
-
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
@@ -401,14 +399,16 @@ export default function SessionEntry() {
         <button
           onClick={handleGenerateSummary}
           disabled={loadingSummary}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-lg text-sm font-medium transition"
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
         >
           {loadingSummary ? "Generating..." : "Generate Summary"}
         </button>
 
         <button
           onClick={handleExport}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-lg text-sm font-medium transition"
+          disabled={!darNote}
+          className={`px-4 py-2 rounded text-white ${darNote ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"
+            }`}
         >
           Export PDF
         </button>
@@ -417,19 +417,26 @@ export default function SessionEntry() {
           <>
             <button
               onClick={() => setShowFHIR(!showFHIR)}
-              className="bg-gray-700 hover:bg-black text-white px-5 py-3 rounded-lg text-sm font-medium transition"
+              className="bg-gray-700 hover:bg-black text-white px-4 py-2 rounded"
             >
               {showFHIR ? "Hide FHIR JSON" : "Preview FHIR JSON"}
             </button>
             <button
               onClick={handleDownloadFHIR}
-              className="bg-blue-800 hover:bg-blue-900 text-white px-5 py-3 rounded-lg text-sm font-medium transition"
+              className="bg-blue-800 hover:bg-blue-900 text-white px-4 py-2 rounded"
             >
               Download FHIR JSON
+            </button>
+            <button
+              onClick={handleSendToSandbox}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            >
+              Send to FHIR Sandbox
             </button>
           </>
         )}
       </div>
+
 
       <SummaryViewer darNote={darNote} generatedAt={generatedAt} />
 
