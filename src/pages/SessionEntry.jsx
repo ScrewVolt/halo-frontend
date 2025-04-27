@@ -367,7 +367,7 @@ export default function SessionEntry() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
+    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto p-4">
       <div>
         <h1 className="text-3xl font-bold text-blue-800 mb-2">
           Session with {patient?.name || "Patient"}
@@ -390,7 +390,7 @@ export default function SessionEntry() {
         )}
       </div>
 
-      <div className="border rounded-lg p-4 bg-gray-50 h-[300px] overflow-y-auto shadow-sm">
+      <div className="border rounded p-4 bg-gray-50 min-h-[300px] max-h-[500px] overflow-y-auto">
         {messages.map((msg) => (
           <ChatMessage key={msg.id} msg={msg} patientId={patientId} sessionId={sessionId} />
         ))}
@@ -407,9 +407,9 @@ export default function SessionEntry() {
         </div>
       )}
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-col sm:flex-row gap-2">
         <input
-          className="flex-1 min-w-[150px] border border-gray-300 p-3 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="flex-1 border p-2 rounded text-sm"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage(chatInput)}
@@ -417,21 +417,22 @@ export default function SessionEntry() {
         />
         <button
           onClick={() => sendMessage(chatInput)}
-          className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg text-sm font-medium shadow transition"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
         >
           Send
         </button>
       </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <VoiceToggle
+          recognizing={recognizing}
+          speaker={speaker}
+          onToggleSpeaker={() => setSpeaker((prev) => (prev === "nurse" ? "patient" : "nurse"))}
+          onStart={startRecognition}
+          onStop={stopRecognition}
+        />
+      </div>
 
-      <VoiceToggle
-        recognizing={recognizing}
-        speaker={speaker}
-        onToggleSpeaker={() => setSpeaker((prev) => (prev === "nurse" ? "patient" : "nurse"))}
-        onStart={startRecognition}
-        onStop={stopRecognition}
-      />
-
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <button
           onClick={handleGenerateSummary}
           disabled={loadingSummary}
@@ -451,7 +452,6 @@ export default function SessionEntry() {
           Export PDF
         </button>
 
-
         {darNote && (
           <>
             <button
@@ -470,8 +470,8 @@ export default function SessionEntry() {
               onClick={handleSendFHIR}
               disabled={!fhirDocument}
               className={`px-4 py-2 rounded text-white ${fhirDocument
-                  ? "bg-blue-700 hover:bg-blue-800"
-                  : "bg-gray-400 cursor-not-allowed"
+                ? "bg-blue-700 hover:bg-blue-800"
+                : "bg-gray-400 cursor-not-allowed"
                 }`}
             >
               Send to Sandbox
@@ -513,11 +513,12 @@ export default function SessionEntry() {
       <div>
         <h3 className="text-lg font-semibold text-green-700 mb-2">Nurse Notes</h3>
         <textarea
+          className="w-full border rounded p-2 text-sm bg-white min-h-[100px]"
           value={sessionNotes}
           onChange={handleNotesChange}
-          placeholder="Enter notes..."
-          className="w-full p-3 border rounded-lg text-sm bg-white min-h-[100px] shadow-sm"
+          placeholder="Enter session notes..."
         />
+
       </div>
     </div>
   );
