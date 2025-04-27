@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
+import toast from "react-hot-toast";
 
 export default function Dashboard() {
   const [name, setName] = useState("");
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const handleAdd = async () => {
     if (!name.trim() || !room.trim() || !user) return;
     const ref = collection(db, "users", user.uid, "patients");
+    try {
     await addDoc(ref, {
       name: name.trim(),
       room: room.trim(),
@@ -42,6 +44,10 @@ export default function Dashboard() {
       createdAt: serverTimestamp(),
       safeMode: true,
     });
+  } catch (err){
+    console.error("Failed to add patient:", err);
+    toast.error("❌ Failed to add patient. Please try again.");
+  }
     setName("");
     setRoom("");
     setNotes("");

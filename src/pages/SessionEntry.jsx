@@ -78,14 +78,18 @@ export default function SessionEntry() {
     const timestamp = new Date();
     const full = `[${timestamp.toLocaleTimeString()}] ${speaker === "nurse" ? "Nurse" : "Patient"
       }: ${text}`;
-
-    await addDoc(
-      collection(db, "users", user.uid, "patients", patientId, "sessions", sessionId, "messages"),
-      {
-        text: full,
-        createdAt: timestamp,
-      }
-    );
+    try {
+      await addDoc(
+        collection(db, "users", user.uid, "patients", patientId, "sessions", sessionId, "messages"),
+        {
+          text: full,
+          createdAt: timestamp,
+        }
+      );
+    } catch (err) {
+      console.error("Failed to save message:", err);
+      toast.error("❌ Failed to send message. Please try again.");
+    }
 
     await updateDoc(doc(db, "users", user.uid, "patients", patientId, "sessions", sessionId), {
       lastUsedAt: timestamp.toISOString(),
@@ -128,7 +132,8 @@ export default function SessionEntry() {
     };
 
     recognition.onerror = (e) => {
-      console.error("Speech error:", e);
+      console.error("Speech recognition error:", e);
+      toast.error("🎤 Microphone error detected. Check mic permissions.");
       setRecognizing(false);
     };
 
@@ -181,8 +186,9 @@ export default function SessionEntry() {
       });
     } catch (err) {
       console.error(err);
-      alert("❌ Failed to generate summary");
-    } finally {
+      toast.error("❌ Failed to generate summary. Please try again.");
+    }
+    finally {
       setLoadingSummary(false);
     }
   };
