@@ -37,43 +37,43 @@ export default function Dashboard() {
     if (!name.trim() || !room.trim() || !user) return;
     const ref = collection(db, "users", user.uid, "patients");
     try {
-    await addDoc(ref, {
-      name: name.trim(),
-      room: room.trim(),
-      notes: notes.trim() || "",
-      createdAt: serverTimestamp(),
-      safeMode: true,
-    });
-  } catch (err){
-    console.error("Failed to add patient:", err);
-    toast.error("❌ Failed to add patient. Please try again.");
-  }
+      await addDoc(ref, {
+        name: name.trim(),
+        room: room.trim(),
+        notes: notes.trim() || "",
+        createdAt: serverTimestamp(),
+        safeMode: true,
+      });
+    } catch (err) {
+      console.error("Failed to add patient:", err);
+      toast.error("❌ Failed to add patient. Please try again.");
+    }
     setName("");
     setRoom("");
     setNotes("");
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
+    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto p-4">
       <div>
         <h1 className="text-3xl font-bold text-blue-800 mb-4">Patient Dashboard</h1>
 
-        <div className="flex flex-wrap gap-3 md:gap-4">
+        <div className="flex flex-col md:flex-row gap-3 md:gap-4 mt-2">
           <input
-            className="flex-1 min-w-[150px] border border-gray-300 p-3 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-[200px] border border-gray-300 p-3 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Patient Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <input
-            className="w-32 border border-gray-300 p-3 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-[150px] border border-gray-300 p-3 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Room #"
             value={room}
             onChange={(e) => setRoom(e.target.value)}
           />
           <button
             onClick={handleAdd}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg text-sm font-medium shadow transition duration-150"
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg text-sm font-medium shadow transition duration-150"
           >
             + Add
           </button>
@@ -87,7 +87,7 @@ export default function Dashboard() {
           onChange={(e) => setNotes(e.target.value)}
         />
 
-        <div className="grid gap-4 mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
           {filteredPatients.map((p) => (
             <div
               key={p.id}
@@ -101,15 +101,9 @@ export default function Dashboard() {
               {p.room && (
                 <p className="text-sm text-gray-500 mt-1">Room {p.room}</p>
               )}
-              {p.notes && (
-                <p className="text-xs text-gray-400 mt-1 italic">
-                  {p.notes.length > 60 ? p.notes.slice(0, 60) + "..." : p.notes}
-                </p>
-              )}
             </div>
           ))}
         </div>
-
       </div>
     </div>
   );
