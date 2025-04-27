@@ -346,12 +346,12 @@ export default function SessionEntry() {
       return;
     }
 
+    const sendToast = toast.loading("Sending to Sandbox...");
+
     try {
       const res = await fetch("https://hapi.fhir.org/baseR4/DocumentReference", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/fhir+json",
-        },
+        headers: { "Content-Type": "application/fhir+json" },
         body: JSON.stringify(fhirDocument),
       });
 
@@ -359,13 +359,12 @@ export default function SessionEntry() {
         throw new Error("Failed to send to sandbox");
       }
 
-      toast.success("✅ Successfully sent to Sandbox!");
+      toast.success("✅ Successfully sent to Sandbox!", { id: sendToast });
     } catch (err) {
       console.error("❌ Failed to send to sandbox:", err);
-      toast.error("❌ Could not send to Sandbox. Please check connection or try again.");
+      toast.error("❌ Could not send to Sandbox. Please try again.", { id: sendToast });
     }
   };
-
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto px-4 sm:px-6">
@@ -443,12 +442,15 @@ export default function SessionEntry() {
 
         <button
           onClick={handleExport}
-          disabled={!darNote}
-          className={`px-4 py-2 rounded text-white ${darNote ? "bg-indigo-600 hover:bg-indigo-700" : "bg-gray-400 cursor-not-allowed"
+          disabled={!darNote && !sessionNotes}
+          className={`px-4 py-2 rounded text-white ${darNote || sessionNotes
+            ? "bg-indigo-600 hover:bg-indigo-700"
+            : "bg-gray-400 cursor-not-allowed"
             }`}
         >
           Export PDF
         </button>
+
 
         {darNote && (
           <>
@@ -466,11 +468,14 @@ export default function SessionEntry() {
             </button>
             <button
               onClick={handleSendFHIR}
-              className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded shadow transition"
+              disabled={!fhirDocument}
+              className={`px-4 py-2 rounded text-white ${fhirDocument
+                  ? "bg-blue-700 hover:bg-blue-800"
+                  : "bg-gray-400 cursor-not-allowed"
+                }`}
             >
               Send to Sandbox
             </button>
-
           </>
         )}
       </div>

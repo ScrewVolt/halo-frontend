@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db, auth } from "../firebase";
 import { collection, addDoc, doc, onSnapshot, serverTimestamp, query, orderBy } from "firebase/firestore";
+import toast from "react-hot-toast";
 
 export default function VisitHistory() {
   const { id } = useParams(); // Patient ID
@@ -50,7 +51,7 @@ export default function VisitHistory() {
       patientName: patient.name || "",
       room: patient.room || "",
     });
-
+    toast.success("✅ New session created!");
     navigate(`/visit/${id}/session/${newSession.id}`);
   };
 
