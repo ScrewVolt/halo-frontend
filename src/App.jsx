@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { auth } from "./firebase";
+import toast from "react-hot-toast";
+
 
 import Dashboard from "./pages/Dashboard";
 import SessionEntry from "./pages/SessionEntry";
@@ -22,6 +24,25 @@ export default function App() {
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      toast.success("✅ Back online!");
+    };
+  
+    const handleOffline = () => {
+      toast.error("⚡ No internet connection detected.");
+    };
+  
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+  
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+  
 
   return (
     <>
