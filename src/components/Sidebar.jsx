@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 
@@ -33,6 +34,15 @@ const Sidebar = ({ onSearch, selectedPatient }) => {
     });
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      console.log("Logged out successfully.");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   return (
     <aside className="w-64 bg-white border-r flex flex-col h-full p-4">
       <h2
@@ -55,7 +65,7 @@ const Sidebar = ({ onSearch, selectedPatient }) => {
       </div>
 
       {selectedPatient && window.location.pathname.includes("/visit/") && (
-        <div className="mt-4">
+        <div className="mt-4 flex-1">
           <h3 className="text-sm font-semibold text-gray-700 mb-1">Patient Notes</h3>
           <textarea
             value={notes}
@@ -65,6 +75,15 @@ const Sidebar = ({ onSearch, selectedPatient }) => {
           />
         </div>
       )}
+
+      <div className="mt-auto pt-4">
+        <button
+          onClick={handleLogout}
+          className="w-full text-sm text-red-600 border border-red-300 hover:bg-red-50 py-2 rounded transition"
+        >
+          Log Out
+        </button>
+      </div>
     </aside>
   );
 };
