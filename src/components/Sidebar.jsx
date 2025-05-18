@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { auth, db } from "../firebase";
 import { doc, updateDoc, onSnapshot } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 
 const Sidebar = ({ onSearch, selectedPatient }) => {
   const navigate = useNavigate();
@@ -31,6 +32,15 @@ const Sidebar = ({ onSearch, selectedPatient }) => {
     await updateDoc(ref, {
       notes: value,
     });
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      navigate("/"); // or redirect to login page
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   return (
@@ -65,6 +75,15 @@ const Sidebar = ({ onSearch, selectedPatient }) => {
           />
         </div>
       )}
+
+      <div className="mt-auto pt-6">
+        <button
+          onClick={handleSignOut}
+          className="w-full px-4 py-2 text-sm text-white bg-red-500 hover:bg-red-600 rounded transition"
+        >
+          Sign Out
+        </button>
+      </div>
     </aside>
   );
 };
