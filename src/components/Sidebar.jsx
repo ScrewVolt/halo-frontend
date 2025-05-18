@@ -44,39 +44,47 @@ const Sidebar = ({ onSearch, selectedPatient }) => {
   };
 
   return (
-    <aside className="w-64 bg-white border-r flex flex-col h-full p-4">
-      <h2
-        className="text-lg font-bold text-blue-700 mb-4 cursor-pointer"
-        onClick={() => navigate("/")}
-      >
-        HALO
-      </h2>
-
-      <div className="mb-4">
-        <input
-          value={searchInput}
-          onChange={(e) => {
-            setSearchInput(e.target.value);
-            onSearch?.(e.target.value);
-          }}
-          placeholder="Search patients..."
-          className="w-full border p-2 rounded text-sm"
-        />
-      </div>
-
-      {selectedPatient && window.location.pathname.includes("/visit/") && (
-        <div className="mt-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">Patient Notes</h3>
-          <textarea
-            value={notes}
-            onChange={(e) => handleNotesUpdate(e.target.value)}
-            placeholder="General notes..."
-            className="w-full p-2 border rounded text-sm min-h-[80px]"
+    <aside className="w-64 bg-white border-r flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="p-4">
+        <h2
+          className="text-lg font-bold text-blue-700 mb-4 cursor-pointer"
+          onClick={() => navigate("/")}
+        >
+          HALO
+        </h2>
+  
+        {/* Search Input */}
+        <div className="mb-4">
+          <input
+            value={searchInput}
+            onChange={(e) => {
+              setSearchInput(e.target.value);
+              onSearch?.(e.target.value);
+            }}
+            placeholder="Search patients..."
+            className="w-full border p-2 rounded text-sm"
           />
         </div>
-      )}
-
-      <div className="mt-auto pt-6">
+      </div>
+  
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto px-4">
+        {selectedPatient && window.location.pathname.includes("/visit/") && (
+          <div className="mt-2">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1">Patient Notes</h3>
+            <textarea
+              value={notes}
+              onChange={(e) => handleNotesUpdate(e.target.value)}
+              placeholder="General notes..."
+              className="w-full p-2 border rounded text-sm min-h-[80px]"
+            />
+          </div>
+        )}
+      </div>
+  
+      {/* Sign Out Button */}
+      <div className="p-4 border-t">
         <button
           onClick={handleSignOut}
           className="w-full px-4 py-2 text-sm text-white bg-red-500 hover:bg-red-600 rounded transition"
@@ -85,7 +93,7 @@ const Sidebar = ({ onSearch, selectedPatient }) => {
         </button>
       </div>
     </aside>
-  );
+  );  
 };
 
 export default Sidebar;
