@@ -100,59 +100,81 @@ export default function SessionEntry() {
     setLiveTranscript("");
   };
 
-  const startRecognition = () => {
+  const startRecognition = async () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("Speech recognition not supported.");
   
-    const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
+    try {
+      // Request mic access explicitly (helps prevent browser denial)
+      await navigator.mediaDevices.getUserMedia({ audio: true });
   
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
   
-    let resultText = "";
-    let restartDelay = 600; // delay before restarting to prevent overlapping
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
   
-    setRecognizing(true);
-    shouldRestartRef.current = true;
+      let resultText = "";
+      const restartDelay = 600;
   
-    recognition.onresult = (e) => {
-      let interim = "";
-      for (let i = e.resultIndex; i < e.results.length; ++i) {
-        const transcript = e.results[i][0].transcript.trim();
-        if (e.results[i].isFinal) {
-          resultText += " " + transcript;
-        } else {
-          interim = transcript;
+      setRecognizing(true);
+      shouldRestartRef.current = true;
+  
+      recognition.onresult = (e) => {
+        let interim = "";
+        for (let i = e.resultIndex; i < e.results.length; ++i) {
+          const transcript = e.results[i][0].transcript.trim();
+          if (e.results[i].isFinal) {
+            resultText += " " + transcript;
+          } else {
+            interim = transcript;
+          }
         }
-      }
-      setLiveTranscript(interim);
-    };
+        setLiveTranscript(interim);
+      };
   
-    recognition.onend = () => {
-      if (resultText.trim()) {
-        sendMessage(resultText.trim());
-      }
-      setLiveTranscript("");
-      resultText = "";
+      recognition.onend = () => {
+        if (resultText.trim()) {
+          sendMessage(resultText.trim());
+        }
+        setLiveTranscript("");
+        resultText = "";
   
-      if (shouldRestartRef.current) {
-        // Add a delay to prevent overlapping chunks from same speaker
-        setTimeout(() => {
-          if (shouldRestartRef.current) startRecognition();
-        }, restartDelay);
-      }
-    };
+        if (shouldRestartRef.current) {
+          setTimeout(() => {
+            if (shouldRestartRef.current) startRecognition();
+          }, restartDelay);
+        }
+      };
   
-    recognition.onerror = (e) => {
-      console.error("Speech recognition error:", e);
-      toast.error("🎤 Microphone error detected. Check mic permissions.");
-      setRecognizing(false);
-    };
+      recognition.onerror = (e) => {
+        console.error("Speech recognition error:", e);
   
-    recognition.start();
-  };
+        if (["not-allowed", "service-not-allowed"].includes(e.error)) {
+          toast.error("🎤 Mic access denied. Please check browser settings.");
+        } else if (e.error === "no-speech") {
+          toast.warning("🎙 No speech detected. Try again.");
+        } else if (e.error === "audio-capture") {
+          toast.error("🎤 No microphone detected. Is your mic connected?");
+        } else {
+          toast.error("🎤 Unknown microphone error.");
+        }
+  
+        setRecognizing(false);
+  
+        // Optional: attempt auto-recovery from transient errors
+        if (shouldRestartRef.current && e.error !== "not-allowed") {
+          setTimeout(() => startRecognition(), restartDelay);
+        }
+      };
+  
+      recognition.start();
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      toast.error("🎤 Failed to access microphone. Please check device settings.");
+    }
+  };  
   
   const stopRecognition = () => {
     shouldRestartRef.current = false;
