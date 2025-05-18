@@ -103,50 +103,64 @@ export default function SessionEntry() {
   const startRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("Speech recognition not supported.");
-
+  
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
+  
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = "en-US";
+  
+    let resultText = "";
+    let restartDelay = 600; // delay before restarting to prevent overlapping
+  
     setRecognizing(true);
     shouldRestartRef.current = true;
-
-    let resultText = "";
-
+  
     recognition.onresult = (e) => {
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; ++i) {
         const transcript = e.results[i][0].transcript.trim();
-        if (e.results[i].isFinal) resultText += " " + transcript;
-        else interim = transcript;
+        if (e.results[i].isFinal) {
+          resultText += " " + transcript;
+        } else {
+          interim = transcript;
+        }
       }
       setLiveTranscript(interim);
     };
-
+  
     recognition.onend = () => {
-      if (resultText.trim()) sendMessage(resultText.trim());
+      if (resultText.trim()) {
+        sendMessage(resultText.trim());
+      }
       setLiveTranscript("");
       resultText = "";
-      if (shouldRestartRef.current) startRecognition();
+  
+      if (shouldRestartRef.current) {
+        // Add a delay to prevent overlapping chunks from same speaker
+        setTimeout(() => {
+          if (shouldRestartRef.current) startRecognition();
+        }, restartDelay);
+      }
     };
-
+  
     recognition.onerror = (e) => {
       console.error("Speech recognition error:", e);
       toast.error("🎤 Microphone error detected. Check mic permissions.");
       setRecognizing(false);
     };
-
+  
     recognition.start();
   };
-
+  
   const stopRecognition = () => {
     shouldRestartRef.current = false;
     recognitionRef.current?.stop();
     recognitionRef.current = null;
     setRecognizing(false);
     setLiveTranscript("");
-  };
+  };  
 
   const handleGenerateSummary = async () => {
     if (!messages.length) return;
