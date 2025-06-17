@@ -27,13 +27,14 @@ export default function SessionEntry() {
   const [speaker, setSpeaker] = useState("nurse");
   const [liveTranscript, setLiveTranscript] = useState("");
   const [recognizing, setRecognizing] = useState(false);
-  const [darNote, setDarNote] = useState("");
+  const [note, setNote] = useState("");
   const [generatedAt, setGeneratedAt] = useState(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [sessionNotes, setSessionNotes] = useState("");
   const [startedAt, setStartedAt] = useState(null);
   const [lastUsedAt, setLastUsedAt] = useState(null);
   const [showFHIR, setShowFHIR] = useState(false);
+  const [noteFormat, setNoteFormat] = useState<"DAR" | "SOAP" | "BIRP">("DAR");
   const recognitionRef = useRef(null);
   const shouldRestartRef = useRef(true);
   const user = auth.currentUser;
@@ -51,7 +52,7 @@ export default function SessionEntry() {
       const sessionSnap = await getDoc(sessionRef);
       if (sessionSnap.exists()) {
         const sessionData = sessionSnap.data();
-        setDarNote(sessionData.darNote || "");
+        setNote(sessionData.note || "");
         setGeneratedAt(sessionData.generatedAt || null);
         setSessionNotes(sessionData.sessionNotes || "");
         setStartedAt(sessionData.startedAt || null);
@@ -194,7 +195,7 @@ export default function SessionEntry() {
       const res = await fetch("https://halo-back.onrender.com/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: chatText }),
+        body: JSON.stringify({ messages: chatText, format: noteFormat }),
       });
 
       if (!res.ok) throw new Error("Failed to fetch summary");
@@ -203,7 +204,7 @@ export default function SessionEntry() {
       if (!data.dar) throw new Error("No DAR returned from backend");
 
       const now = new Date().toISOString();
-      setDarNote(data.dar.trim());
+      setNote(data.dar.trim());
       setGeneratedAt(now);
 
       const sessionRef = doc(
@@ -216,7 +217,7 @@ export default function SessionEntry() {
         sessionId
       );
       await updateDoc(sessionRef, {
-        darNote: data.dar.trim(),
+        note: data.dar.trim(),
         generatedAt: now,
         lastUsedAt: now,
       });
@@ -230,33 +231,29 @@ export default function SessionEntry() {
   };
 
   const handleExport = async () => {
-    if (!darNote.trim()) {
-      toast.error("No DAR note available to export!");
+    if (!note.trim()) {
+      toast.error("No note available to export!");
       return;
     }
-
+  
     if (!navigator.onLine) {
       toast.error("Cannot export while offline.");
       return;
     }
-
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "pt",
-      format: "letter", // Standard hospital format (8.5x11 inches)
-    });
-
+  
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+  
     const margin = 40;
     const pageWidth = pdf.internal.pageSize.getWidth();
     const maxTextWidth = pageWidth - margin * 2;
     let y = margin;
-
+  
     // Title
     pdf.setFontSize(22);
-    pdf.setTextColor(30, 58, 138); // HALO Blue
+    pdf.setTextColor(30, 58, 138);
     pdf.text("HALO - Session Report", margin, y);
     y += 40;
-
+  
     // Patient Info
     pdf.setFontSize(13);
     pdf.setTextColor(0, 0, 0);
@@ -267,34 +264,32 @@ export default function SessionEntry() {
       pdf.text(`Session Started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, margin, y);
       y += 20;
     }
-
+  
     // Divider
     pdf.setDrawColor(180);
     pdf.line(margin, y, pageWidth - margin, y);
     y += 20;
-
-    // AI-Generated DAR Note
+  
+    // Section Header
     pdf.setFontSize(16);
     pdf.setTextColor(80, 80, 80);
-    pdf.text("AI-Generated DAR Note", margin, y);
+    pdf.text(`AI-Generated ${noteFormat} Note`, margin, y);
     y += 25;
-
-    // Draw DAR boxes
-    const parseSection = (sectionTitle, text) => {
-      if (!text) return;
-
-      pdf.setFillColor(240, 245, 255); // Light blue background
+  
+    // Boxed Section Renderer
+    const parseSection = (title, content) => {
+      if (!content) return;
+      pdf.setFillColor(240, 245, 255);
       const boxHeight = 24;
       pdf.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 5, 5, "F");
       pdf.setFontSize(13);
       pdf.setTextColor(30, 58, 138);
-      pdf.text(sectionTitle, margin + 10, y + 17);
+      pdf.text(title, margin + 10, y + 17);
       y += boxHeight + 10;
-
+  
       pdf.setFontSize(12);
       pdf.setTextColor(60, 60, 60);
-
-      const lines = pdf.splitTextToSize(text, maxTextWidth);
+      const lines = pdf.splitTextToSize(content, maxTextWidth);
       lines.forEach((line) => {
         if (y > 750) {
           pdf.addPage();
@@ -303,37 +298,48 @@ export default function SessionEntry() {
         pdf.text(line, margin, y);
         y += 16;
       });
-
+  
       y += 10;
     };
-
-    // Parsing from your markdown-style note
-    const dataMatch = darNote.match(/\*\*D \(Data\):\*\*(.*?)(?=\*\*A|\*\*R|$)/s);
-    const actionMatch = darNote.match(/\*\*A \(Action\):\*\*(.*?)(?=\*\*R|$)/s);
-    const responseMatch = darNote.match(/\*\*R \(Response\):\*\*(.*)/s);
-
-    parseSection("D (Data)", dataMatch ? dataMatch[1].trim() : "");
-    parseSection("A (Action)", actionMatch ? actionMatch[1].trim() : "");
-    parseSection("R (Response)", responseMatch ? responseMatch[1].trim() : "");
-
-    // Optional: Nurse Notes
+  
+    // Format-specific parsing
+    const parseByFormat = () => {
+      if (noteFormat === "DAR") {
+        parseSection("D (Data)", note.match(/\*\*D \(Data\):\*\*(.*?)(?=\*\*A|\*\*R|$)/s)?.[1]?.trim() || "");
+        parseSection("A (Action)", note.match(/\*\*A \(Action\):\*\*(.*?)(?=\*\*R|$)/s)?.[1]?.trim() || "");
+        parseSection("R (Response)", note.match(/\*\*R \(Response\):\*\*(.*)/s)?.[1]?.trim() || "");
+      } else if (noteFormat === "SOAP") {
+        parseSection("S (Subjective)", note.match(/\*\*S \(Subjective\):\*\*(.*?)(?=\*\*O|\*\*A|\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("O (Objective)", note.match(/\*\*O \(Objective\):\*\*(.*?)(?=\*\*A|\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("A (Assessment)", note.match(/\*\*A \(Assessment\):\*\*(.*?)(?=\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("P (Plan)", note.match(/\*\*P \(Plan\):\*\*(.*)/s)?.[1]?.trim() || "");
+      } else if (noteFormat === "BIRP") {
+        parseSection("B (Behavior)", note.match(/\*\*B \(Behavior\):\*\*(.*?)(?=\*\*I|\*\*R|\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("I (Intervention)", note.match(/\*\*I \(Intervention\):\*\*(.*?)(?=\*\*R|\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("R (Response)", note.match(/\*\*R \(Response\):\*\*(.*?)(?=\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("P (Plan)", note.match(/\*\*P \(Plan\):\*\*(.*)/s)?.[1]?.trim() || "");
+      }
+    };
+  
+    parseByFormat();
+  
+    // Nurse Notes
     if (sessionNotes.trim()) {
       if (y > 700) {
         pdf.addPage();
         y = margin;
       }
-
-      pdf.setFillColor(220, 250, 220); // Light green background
+  
+      pdf.setFillColor(220, 250, 220);
       const boxHeight = 24;
       pdf.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 5, 5, "F");
       pdf.setFontSize(13);
-      pdf.setTextColor(34, 139, 34); // Green text
+      pdf.setTextColor(34, 139, 34);
       pdf.text("Nurse Notes", margin + 10, y + 17);
       y += boxHeight + 10;
-
+  
       pdf.setFontSize(12);
       pdf.setTextColor(60, 60, 60);
-
       const notesLines = pdf.splitTextToSize(sessionNotes, maxTextWidth);
       notesLines.forEach((line) => {
         if (y > 750) {
@@ -344,11 +350,10 @@ export default function SessionEntry() {
         y += 16;
       });
     }
-
+  
     pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
     toast.success("✅ PDF exported successfully!");
-  };
-
+  };  
 
   const handleNotesChange = async (e) => {
     const value = e.target.value;
@@ -364,7 +369,7 @@ export default function SessionEntry() {
   };
 
 
-  const fhirDocument = generateFHIRDocument({ darNote, patient, generatedAt });
+  const fhirDocument = generateFHIRDocument({ note, patient, generatedAt });
 
   const handleDownloadFHIR = () => {
     const blob = new Blob([JSON.stringify(fhirDocument, null, 2)], {
@@ -467,6 +472,19 @@ export default function SessionEntry() {
           onStop={stopRecognition}
         />
       </div>
+      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+  <label className="text-sm font-medium text-gray-700">Note Format</label>
+  <select
+    value={noteFormat}
+    onChange={(e) => setNoteFormat(e.target.value)}
+
+    className="border text-sm rounded px-3 py-2"
+  >
+    <option value="DAR">DAR</option>
+    <option value="SOAP">SOAP</option>
+    <option value="BIRP">BIRP</option>
+  </select>
+</div>
 
       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <button
@@ -479,8 +497,8 @@ export default function SessionEntry() {
 
         <button
           onClick={handleExport}
-          disabled={!darNote && !sessionNotes}
-          className={`px-4 py-2 rounded text-white ${darNote || sessionNotes
+          disabled={!note && !sessionNotes}
+          className={`px-4 py-2 rounded text-white ${note || sessionNotes
             ? "bg-indigo-600 hover:bg-indigo-700"
             : "bg-gray-400 cursor-not-allowed"
             }`}
@@ -488,7 +506,7 @@ export default function SessionEntry() {
           Export PDF
         </button>
 
-        {darNote && (
+        {note && (
           <>
             <button
               onClick={() => setShowFHIR(!showFHIR)}
@@ -517,7 +535,7 @@ export default function SessionEntry() {
       </div>
 
 
-      <SummaryViewer darNote={darNote} generatedAt={generatedAt} />
+      <SummaryViewer note={note} generatedAt={generatedAt} />
 
       {showFHIR && fhirDocument && (
         <div className="bg-white border rounded-lg p-6 text-sm text-gray-700 overflow-x-auto shadow-sm mt-6">
