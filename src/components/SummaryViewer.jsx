@@ -4,13 +4,6 @@ import React from 'react';
 export default function SummaryViewer({ note, format, generatedAt }) {
   if (!note) return null;
 
-  // Helper to extract section content by header
-  const extractSection = (text, header) => {
-    const regex = new RegExp(`\\*\\*${header}\\:\\*\\*\\s*([\\s\\S]*?)(?=(\\n\\*\\*|$))`, 'i');
-    const match = text.match(regex);
-    return match ? match[1].trim() : '';
-  };
-
   // Define section headers and styles per format
   const formatConfig = {
     DAR: [
@@ -33,6 +26,17 @@ export default function SummaryViewer({ note, format, generatedAt }) {
   };
 
   const sections = formatConfig[format] || [];
+  const headerKeys = sections.map(s => s.key).join('|');
+
+  // Extract content between headers, allowing bold or plain headings
+  const extractSection = (text, key) => {
+    // Regex matches **Key**: or Key: (bold or not), then captures until next header
+    const pattern = `(?:\\*\\*)?${key}(?:\\*\\*)?[\\s]*[:\-]?[\\s]*([\\s\\S]*?)(?=(?:\\n(?:\\*\\*)?(?:${headerKeys})(?:\\*\\*)?[\\s]*[:\-]?)|$)`;
+    const regex = new RegExp(pattern, 'i');
+    const match = text.match(regex);
+    return match ? match[1].trim() : '';
+  };
+
   // Parse each section's content
   const parsedSections = sections
     .map(({ key, title, bg, color }) => {
