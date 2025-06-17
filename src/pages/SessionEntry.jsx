@@ -233,10 +233,10 @@ export default function SessionEntry() {
   const handleExport = async () => {
     const safeNote = typeof note === "string" ? note : String(note);
 
-    if (!note.trim()) {
+    if (!safeNote.trim()) {
       toast.error("No note available to export!");
       return;
-    }
+    }    
   
     if (!navigator.onLine) {
       toast.error("Cannot export while offline.");
