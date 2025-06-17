@@ -544,7 +544,7 @@ export default function SessionEntry() {
 
 
       {note && (
-        <SummaryViewer note={note} generatedAt={generatedAt} />
+        <SummaryViewer note={note} format={noteFormat} generatedAt={generatedAt} />
       )}
 
 

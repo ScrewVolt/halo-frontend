@@ -1,49 +1,61 @@
-export default function SummaryViewer({ darNote, generatedAt }) {
-  if (!darNote) return null;
+import React from 'react';
 
-  // Helper function to extract sections
-  const extractSection = (text, sectionName) => {
-    const regex = new RegExp(`\\*\\*${sectionName}:\\*\\*\\s*([\\s\\S]*?)(?=\\n\\*\\*|$)`, "i");
+// A generic viewer for AI-generated nursing notes in various formats (DAR, SOAP, BIRP)
+export default function SummaryViewer({ note, format, generatedAt }) {
+  if (!note) return null;
+
+  // Helper to extract section content by header
+  const extractSection = (text, header) => {
+    const regex = new RegExp(`\\*\\*${header}\\:\\*\\*\\s*([\\s\\S]*?)(?=(\\n\\*\\*|$))`, 'i');
     const match = text.match(regex);
-    return match ? match[1].trim() : "";
+    return match ? match[1].trim() : '';
   };
 
-  const dataSection = extractSection(darNote, "D \\(Data\\)");
-  const actionSection = extractSection(darNote, "A \\(Action\\)");
-  const responseSection = extractSection(darNote, "R \\(Response\\)");
+  // Define section headers per format
+  const formatConfig = {
+    DAR: [
+      { key: 'D (Data)', title: 'Data (D)', bg: 'bg-gray-100', color: 'text-blue-700' },
+      { key: 'A (Action)', title: 'Action (A)', bg: 'bg-green-100', color: 'text-green-700' },
+      { key: 'R (Response)', title: 'Response (R)', bg: 'bg-yellow-100', color: 'text-yellow-700' }
+    ],
+    SOAP: [
+      { key: 'S (Subjective)', title: 'Subjective (S)', bg: 'bg-gray-100', color: 'text-blue-700' },
+      { key: 'O (Objective)', title: 'Objective (O)', bg: 'bg-green-100', color: 'text-green-700' },
+      { key: 'A (Assessment)', title: 'Assessment (A)', bg: 'bg-yellow-100', color: 'text-yellow-700' },
+      { key: 'P (Plan)', title: 'Plan (P)', bg: 'bg-pink-100', color: 'text-pink-700' }
+    ],
+    BIRP: [
+      { key: 'B (Behavior)', title: 'Behavior (B)', bg: 'bg-gray-100', color: 'text-blue-700' },
+      { key: 'I (Intervention)', title: 'Intervention (I)', bg: 'bg-green-100', color: 'text-green-700' },
+      { key: 'R (Response)', title: 'Response (R)', bg: 'bg-yellow-100', color: 'text-yellow-700' },
+      { key: 'P (Plan)', title: 'Plan (P)', bg: 'bg-pink-100', color: 'text-pink-700' }
+    ]
+  };
+
+  const sections = formatConfig[format] || [];
 
   return (
     <div className="mt-6 bg-gray-50 border rounded-lg p-6 shadow-md space-y-6">
-      <h3 className="text-xl font-bold text-blue-800 mb-2">🧠 AI-Generated DAR Note</h3>
-      {generatedAt && (
-        <p className="text-sm text-gray-500 mb-4 italic">
-          Generated on: {new Date(generatedAt).toLocaleString()}
-        </p>
-      )}
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-bold text-blue-800">🧠 AI-Generated {format} Note</h3>
+        {generatedAt && (
+          <span className="text-sm text-gray-500 italic">
+            Generated on: {new Date(generatedAt).toLocaleString()}
+          </span>
+        )}
+      </div>
 
-      {/* Data Section */}
-      {dataSection && (
-        <div className="bg-gray-100 rounded-xl p-4 border shadow-sm">
-          <h4 className="text-lg font-semibold text-blue-700 mb-2">Data (D)</h4>
-          <p className="text-gray-700 text-sm whitespace-pre-wrap">{dataSection}</p>
-        </div>
-      )}
-
-      {/* Action Section */}
-      {actionSection && (
-        <div className="bg-green-100 rounded-xl p-4 border shadow-sm">
-          <h4 className="text-lg font-semibold text-green-700 mb-2">Action (A)</h4>
-          <p className="text-gray-700 text-sm whitespace-pre-wrap">{actionSection}</p>
-        </div>
-      )}
-
-      {/* Response Section */}
-      {responseSection && (
-        <div className="bg-yellow-100 rounded-xl p-4 border shadow-sm">
-          <h4 className="text-lg font-semibold text-yellow-700 mb-2">Response (R)</h4>
-          <p className="text-gray-700 text-sm whitespace-pre-wrap">{responseSection}</p>
-        </div>
-      )}
+      {sections.map(({ key, title, bg, color }) => {
+        const content = extractSection(note, key);
+        return (
+          content && (
+            <div key={key} className={`${bg} rounded-xl p-4 border shadow-sm`}>
+              <h4 className={`text-lg font-semibold ${color} mb-2`}>{title}</h4>
+              <p className="text-gray-700 text-sm whitespace-pre-wrap">{content}</p>
+            </div>
+          )
+        );
+      })}
     </div>
   );
 }
