@@ -34,7 +34,7 @@ export default function SessionEntry() {
   const [startedAt, setStartedAt] = useState(null);
   const [lastUsedAt, setLastUsedAt] = useState(null);
   const [showFHIR, setShowFHIR] = useState(false);
-  const [noteFormat, setNoteFormat] = useState<"DAR" | "SOAP" | "BIRP">("DAR");
+  const [noteFormat, setNoteFormat] = useState("DAR");
   const recognitionRef = useRef(null);
   const shouldRestartRef = useRef(true);
   const user = auth.currentUser;
