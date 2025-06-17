@@ -1,6 +1,6 @@
 import React from 'react';
 
-// SummaryViewer component displays AI-generated notes in formats DAR, SOAP, or BIRP
+// SummaryViewer component displays AI-generated nursing notes in formats DAR, SOAP, or BIRP
 export default function SummaryViewer({ note, format, generatedAt }) {
   if (!note) return null;
 
@@ -28,23 +28,35 @@ export default function SummaryViewer({ note, format, generatedAt }) {
   const sections = formatConfig[format] || [];
   const lines = note.split('\n');
 
-  // Extract lines for a given section key
-  const extractSection = (key) => {
-    const headerRegex = new RegExp(`^\\s*(?:#+\\s*)?(?:\\*\\*)?${key}(?:\\*\\*)?(?:\\s*\\([^)]*\\))?\\s*[:]?\\s*$`, 'i');
-    const start = lines.findIndex(line => headerRegex.test(line));
-    if (start < 0) return '';
-    const content = [];
-    for (let i = start + 1; i < lines.length; i++) {
-      // stop at next header
-      if (sections.some(s => {
-        return new RegExp(`^\\s*(?:#+\\s*)?(?:\\*\\*)?${s.key}(?:\\*\\*)?(?:\\s*\\([^)]*\\))?\\s*[:]?\\s*$`, 'i').test(lines[i]);
-      })) break;
-      content.push(lines[i]);
-    }
-    return content.join('\n').trim();
+  // Normalize a heading line to its key base (e.g. "## Objective:" -> "Objective")
+  const normalize = (line) => {
+    return line
+      .trim()
+      .replace(/^#+\s*/, '')         // remove markdown hashes
+      .replace(/^\*\*/, '')         // remove leading bold
+      .replace(/\*\*$/, '')         // remove trailing bold
+      .replace(/:$/, '')              // remove trailing colon
+      .replace(/\s*\([^)]*\)$/, '') // remove parenthetical
+      .trim();
   };
 
-  // Build parsed sections content
+  // Find section content by matching normalized headings
+  const extractSection = (key) => {
+    const lowerKey = key.toLowerCase();
+    // find start index
+    const start = lines.findIndex(line => normalize(line).toLowerCase() === lowerKey);
+    if (start < 0) return '';
+    const contentLines = [];
+    for (let i = start + 1; i < lines.length; i++) {
+      const norm = normalize(lines[i]);
+      // break if norm matches any other section key
+      if (sections.some(s => norm.toLowerCase() === s.key.toLowerCase())) break;
+      contentLines.push(lines[i]);
+    }
+    return contentLines.join('\n').trim();
+  };
+
+  // Build parsed sections
   const parsedSections = sections
     .map(({ key, title, bg, color }) => {
       const content = extractSection(key);
