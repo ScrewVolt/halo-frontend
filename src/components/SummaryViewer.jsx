@@ -1,10 +1,10 @@
 import React from 'react';
 
-// A generic viewer for AI-generated nursing notes in various formats (DAR, SOAP, BIRP)
+// SummaryViewer component displays AI-generated notes in formats DAR, SOAP, or BIRP
 export default function SummaryViewer({ note, format, generatedAt }) {
   if (!note) return null;
 
-  // Define section headers and styles per format
+  // Configuration for each note format
   const formatConfig = {
     DAR: [
       { key: 'Data', title: 'Data (D)', bg: 'bg-gray-100', color: 'text-blue-700' },
@@ -28,26 +28,23 @@ export default function SummaryViewer({ note, format, generatedAt }) {
   const sections = formatConfig[format] || [];
   const lines = note.split('\n');
 
-  // Helper to parse sections by header lines
+  // Extract lines for a given section key
   const extractSection = (key) => {
-    // Pattern to match **Key:** or Key:
-    const headerPattern = new RegExp(`^\\*\\*${key}\\*\\*[:]?\\s*$|^${key}[:]?\\s*$`, 'i');
-    let startIndex = lines.findIndex(line => headerPattern.test(line));
-    if (startIndex === -1) return '';
-    // Collect lines until next header
-    const contentLines = [];
-    for (let i = startIndex + 1; i < lines.length; i++) {
-      const isNextHeader = sections.some(s => {
-        const pat = new RegExp(`^\\*\\*${s.key}\\*\\*[:]?\\s*$|^${s.key}[:]?\\s*$`, 'i');
-        return pat.test(lines[i]);
-      });
-      if (isNextHeader) break;
-      contentLines.push(lines[i]);
+    const headerRegex = new RegExp(`^\\s*(?:#+\\s*)?(?:\\*\\*)?${key}(?:\\*\\*)?(?:\\s*\\([^)]*\\))?\\s*[:]?\\s*$`, 'i');
+    const start = lines.findIndex(line => headerRegex.test(line));
+    if (start < 0) return '';
+    const content = [];
+    for (let i = start + 1; i < lines.length; i++) {
+      // stop at next header
+      if (sections.some(s => {
+        return new RegExp(`^\\s*(?:#+\\s*)?(?:\\*\\*)?${s.key}(?:\\*\\*)?(?:\\s*\\([^)]*\\))?\\s*[:]?\\s*$`, 'i').test(lines[i]);
+      })) break;
+      content.push(lines[i]);
     }
-    return contentLines.join('\n').trim();
+    return content.join('\n').trim();
   };
 
-  // Build parsed sections
+  // Build parsed sections content
   const parsedSections = sections
     .map(({ key, title, bg, color }) => {
       const content = extractSection(key);
