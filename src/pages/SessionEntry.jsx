@@ -52,7 +52,7 @@ export default function SessionEntry() {
       const sessionSnap = await getDoc(sessionRef);
       if (sessionSnap.exists()) {
         const sessionData = sessionSnap.data();
-        setNote(sessionData.note || "");
+        setNote(typeof sessionData.note === "string" ? sessionData.note : "");
         setGeneratedAt(sessionData.generatedAt || null);
         setSessionNotes(sessionData.sessionNotes || "");
         setStartedAt(sessionData.startedAt || null);
