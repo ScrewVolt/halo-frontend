@@ -201,10 +201,10 @@ export default function SessionEntry() {
       if (!res.ok) throw new Error("Failed to fetch summary");
 
       const data = await res.json();
-      if (!data.dar) throw new Error("No DAR returned from backend");
+      if (!data.note) throw new Error("No Note returned from backend");
 
       const now = new Date().toISOString();
-      setNote(data.dar.trim());
+      setNote(data.note.trim());
       setGeneratedAt(now);
 
       const sessionRef = doc(
