@@ -26,23 +26,32 @@ export default function SummaryViewer({ note, format, generatedAt }) {
   };
 
   const sections = formatConfig[format] || [];
-  const headerKeys = sections.map(s => s.key).join('|');
+  const lines = note.split('\n');
 
-  // Extract content between headers, allowing bold or plain headings
-  const extractSection = (text, key) => {
-    const pattern = `(?:\\*\\*)?${key}(?:\\*\\*)?[\\s]*[:\\-]?[\\s]*([\\s\\S]*?)(?=(?:\\n(?:\\*\\*)?(?:${headerKeys})(?:\\*\\*)?[\\s]*[:\\-]?)|$)`;
-    const regex = new RegExp(pattern, 'i');
-    const match = text.match(regex);
-    return match ? match[1].trim() : '';
+  // Helper to parse sections by header lines
+  const extractSection = (key) => {
+    // Pattern to match **Key:** or Key:
+    const headerPattern = new RegExp(`^\\*\\*${key}\\*\\*[:]?\\s*$|^${key}[:]?\\s*$`, 'i');
+    let startIndex = lines.findIndex(line => headerPattern.test(line));
+    if (startIndex === -1) return '';
+    // Collect lines until next header
+    const contentLines = [];
+    for (let i = startIndex + 1; i < lines.length; i++) {
+      const isNextHeader = sections.some(s => {
+        const pat = new RegExp(`^\\*\\*${s.key}\\*\\*[:]?\\s*$|^${s.key}[:]?\\s*$`, 'i');
+        return pat.test(lines[i]);
+      });
+      if (isNextHeader) break;
+      contentLines.push(lines[i]);
+    }
+    return contentLines.join('\n').trim();
   };
 
-  // Parse each section's content
+  // Build parsed sections
   const parsedSections = sections
     .map(({ key, title, bg, color }) => {
-      const content = extractSection(note, key);
-      return content
-        ? { title, content, bg, color }
-        : null;
+      const content = extractSection(key);
+      return content ? { title, content, bg, color } : null;
     })
     .filter(Boolean);
 
@@ -61,7 +70,11 @@ export default function SummaryViewer({ note, format, generatedAt }) {
         parsedSections.map(({ title, content, bg, color }) => (
           <div key={title} className={`${bg} rounded-xl p-4 border shadow-sm`}>
             <h4 className={`text-lg font-semibold ${color} mb-2`}>{title}</h4>
-            <p className="text-gray-700 text-sm whitespace-pre-wrap">{content}</p>
+            <div className="text-gray-700 text-sm whitespace-pre-wrap">
+              {content.split('\n').map((line, idx) => (
+                <p key={idx}>{line}</p>
+              ))}
+            </div>
           </div>
         ))
       ) : (
