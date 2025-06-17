@@ -11,7 +11,7 @@ export default function SummaryViewer({ note, format, generatedAt }) {
     return match ? match[1].trim() : '';
   };
 
-  // Define section headers per format
+  // Define section headers and styles per format
   const formatConfig = {
     DAR: [
       { key: 'D (Data)', title: 'Data (D)', bg: 'bg-gray-100', color: 'text-blue-700' },
@@ -33,6 +33,15 @@ export default function SummaryViewer({ note, format, generatedAt }) {
   };
 
   const sections = formatConfig[format] || [];
+  // Parse each section's content
+  const parsedSections = sections
+    .map(({ key, title, bg, color }) => {
+      const content = extractSection(note, key);
+      return content
+        ? { title, content, bg, color }
+        : null;
+    })
+    .filter(Boolean);
 
   return (
     <div className="mt-6 bg-gray-50 border rounded-lg p-6 shadow-md space-y-6">
@@ -45,17 +54,18 @@ export default function SummaryViewer({ note, format, generatedAt }) {
         )}
       </div>
 
-      {sections.map(({ key, title, bg, color }) => {
-        const content = extractSection(note, key);
-        return (
-          content && (
-            <div key={key} className={`${bg} rounded-xl p-4 border shadow-sm`}>
-              <h4 className={`text-lg font-semibold ${color} mb-2`}>{title}</h4>
-              <p className="text-gray-700 text-sm whitespace-pre-wrap">{content}</p>
-            </div>
-          )
-        );
-      })}
+      {parsedSections.length > 0 ? (
+        parsedSections.map(({ title, content, bg, color }) => (
+          <div key={title} className={`${bg} rounded-xl p-4 border shadow-sm`}>
+            <h4 className={`text-lg font-semibold ${color} mb-2`}>{title}</h4>
+            <p className="text-gray-700 text-sm whitespace-pre-wrap">{content}</p>
+          </div>
+        ))
+      ) : (
+        <div className="bg-white rounded-xl p-4 border shadow-sm">
+          <pre className="text-gray-700 text-sm whitespace-pre-wrap">{note}</pre>
+        </div>
+      )}
     </div>
   );
 }
