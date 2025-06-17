@@ -231,6 +231,8 @@ export default function SessionEntry() {
   };
 
   const handleExport = async () => {
+    const safeNote = typeof note === "string" ? note : String(note);
+
     if (!note.trim()) {
       toast.error("No note available to export!");
       return;
@@ -305,19 +307,19 @@ export default function SessionEntry() {
     // Format-specific parsing
     const parseByFormat = () => {
       if (noteFormat === "DAR") {
-        parseSection("D (Data)", note.match(/\*\*D \(Data\):\*\*(.*?)(?=\*\*A|\*\*R|$)/s)?.[1]?.trim() || "");
-        parseSection("A (Action)", note.match(/\*\*A \(Action\):\*\*(.*?)(?=\*\*R|$)/s)?.[1]?.trim() || "");
-        parseSection("R (Response)", note.match(/\*\*R \(Response\):\*\*(.*)/s)?.[1]?.trim() || "");
+        parseSection("D (Data)", safeNote.match(/\*\*D \(Data\):\*\*(.*?)(?=\*\*A|\*\*R|$)/s)?.[1]?.trim() || "");
+        parseSection("A (Action)", safeNote.match(/\*\*A \(Action\):\*\*(.*?)(?=\*\*R|$)/s)?.[1]?.trim() || "");
+        parseSection("R (Response)", safeNote.match(/\*\*R \(Response\):\*\*(.*)/s)?.[1]?.trim() || "");
       } else if (noteFormat === "SOAP") {
-        parseSection("S (Subjective)", note.match(/\*\*S \(Subjective\):\*\*(.*?)(?=\*\*O|\*\*A|\*\*P|$)/s)?.[1]?.trim() || "");
-        parseSection("O (Objective)", note.match(/\*\*O \(Objective\):\*\*(.*?)(?=\*\*A|\*\*P|$)/s)?.[1]?.trim() || "");
-        parseSection("A (Assessment)", note.match(/\*\*A \(Assessment\):\*\*(.*?)(?=\*\*P|$)/s)?.[1]?.trim() || "");
-        parseSection("P (Plan)", note.match(/\*\*P \(Plan\):\*\*(.*)/s)?.[1]?.trim() || "");
+        parseSection("S (Subjective)", safeNote.match(/\*\*S \(Subjective\):\*\*(.*?)(?=\*\*O|\*\*A|\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("O (Objective)", safeNote.match(/\*\*O \(Objective\):\*\*(.*?)(?=\*\*A|\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("A (Assessment)", safeNote.match(/\*\*A \(Assessment\):\*\*(.*?)(?=\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("P (Plan)", safeNote.match(/\*\*P \(Plan\):\*\*(.*)/s)?.[1]?.trim() || "");
       } else if (noteFormat === "BIRP") {
-        parseSection("B (Behavior)", note.match(/\*\*B \(Behavior\):\*\*(.*?)(?=\*\*I|\*\*R|\*\*P|$)/s)?.[1]?.trim() || "");
-        parseSection("I (Intervention)", note.match(/\*\*I \(Intervention\):\*\*(.*?)(?=\*\*R|\*\*P|$)/s)?.[1]?.trim() || "");
-        parseSection("R (Response)", note.match(/\*\*R \(Response\):\*\*(.*?)(?=\*\*P|$)/s)?.[1]?.trim() || "");
-        parseSection("P (Plan)", note.match(/\*\*P \(Plan\):\*\*(.*)/s)?.[1]?.trim() || "");
+        parseSection("B (Behavior)", safeNote.match(/\*\*B \(Behavior\):\*\*(.*?)(?=\*\*I|\*\*R|\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("I (Intervention)", safeNote.match(/\*\*I \(Intervention\):\*\*(.*?)(?=\*\*R|\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("R (Response)", safeNote.match(/\*\*R \(Response\):\*\*(.*?)(?=\*\*P|$)/s)?.[1]?.trim() || "");
+        parseSection("P (Plan)", safeNote.match(/\*\*P \(Plan\):\*\*(.*)/s)?.[1]?.trim() || "");
       }
     };
   
