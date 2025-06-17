@@ -189,25 +189,31 @@ export default function SessionEntry() {
   const handleGenerateSummary = async () => {
     if (!messages.length) return;
     setLoadingSummary(true);
-
-    const chatText = messages.map((m) => m.text).join("\n");
-
+  
+    const chatText = messages.map(m => m.text).join("\n");
+  
     try {
       const res = await fetch("https://halo-back.onrender.com/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: chatText, format: noteFormat }),
       });
-
-      if (!res.ok) throw new Error("Failed to fetch summary");
-
+  
+      if (!res.ok) {
+        // Attempt to parse an error message from the body
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Summary API error:", errorData);
+        throw new Error(errorData.error || "Failed to fetch summary");
+      }
+  
       const data = await res.json();
-      if (!data.note) throw new Error("No Note returned from backend");
-
+      if (!data.note) throw new Error("No note returned from backend");
+  
       const now = new Date().toISOString();
       setNote(data.note.trim());
       setGeneratedAt(now);
-
+  
+      // Persist to Firestore
       const sessionRef = doc(
         db,
         "users",
@@ -222,14 +228,17 @@ export default function SessionEntry() {
         generatedAt: now,
         lastUsedAt: now,
       });
+  
+      // **Show a success toast**
+      toast.success("✅ Summary generated successfully!");
     } catch (err) {
-      console.error(err);
-      toast.error("❌ Failed to generate summary. Please try again.");
-    }
-    finally {
+      console.error("Error generating summary:", err);
+      toast.error(`❌ ${err.message || "Failed to generate summary."}`);
+    } finally {
       setLoadingSummary(false);
     }
   };
+  
 
   const handleExport = async () => {
     const safeNote = typeof note === "string" ? note : String(note);
