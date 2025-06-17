@@ -11,6 +11,7 @@ import {
   orderBy,
   setDoc,
 } from "firebase/firestore";
+import { useMemo } from "react";
 import { db, auth } from "../firebase";
 import ChatMessage from "../components/ChatMessage";
 import VoiceToggle from "../components/VoiceToggle";
@@ -104,24 +105,24 @@ export default function SessionEntry() {
   const startRecognition = async () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert("Speech recognition not supported.");
-  
+
     try {
       // Request mic access explicitly (helps prevent browser denial)
       await navigator.mediaDevices.getUserMedia({ audio: true });
-  
+
       const recognition = new SpeechRecognition();
       recognitionRef.current = recognition;
-  
+
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.lang = "en-US";
-  
+
       let resultText = "";
       const restartDelay = 600;
-  
+
       setRecognizing(true);
       shouldRestartRef.current = true;
-  
+
       recognition.onresult = (e) => {
         let interim = "";
         for (let i = e.resultIndex; i < e.results.length; ++i) {
@@ -134,24 +135,24 @@ export default function SessionEntry() {
         }
         setLiveTranscript(interim);
       };
-  
+
       recognition.onend = () => {
         if (resultText.trim()) {
           sendMessage(resultText.trim());
         }
         setLiveTranscript("");
         resultText = "";
-  
+
         if (shouldRestartRef.current) {
           setTimeout(() => {
             if (shouldRestartRef.current) startRecognition();
           }, restartDelay);
         }
       };
-  
+
       recognition.onerror = (e) => {
         console.error("Speech recognition error:", e);
-  
+
         if (["not-allowed", "service-not-allowed"].includes(e.error)) {
           toast.error("🎤 Mic access denied. Please check browser settings.");
         } else if (e.error === "no-speech") {
@@ -161,29 +162,29 @@ export default function SessionEntry() {
         } else {
           toast.error("🎤 Unknown microphone error.");
         }
-  
+
         setRecognizing(false);
-  
+
         // Optional: attempt auto-recovery from transient errors
         if (shouldRestartRef.current && e.error !== "not-allowed") {
           setTimeout(() => startRecognition(), restartDelay);
         }
       };
-  
+
       recognition.start();
     } catch (err) {
       console.error("Microphone access error:", err);
       toast.error("🎤 Failed to access microphone. Please check device settings.");
     }
-  };  
-  
+  };
+
   const stopRecognition = () => {
     shouldRestartRef.current = false;
     recognitionRef.current?.stop();
     recognitionRef.current = null;
     setRecognizing(false);
     setLiveTranscript("");
-  };  
+  };
 
   const handleGenerateSummary = async () => {
     if (!messages.length) return;
@@ -236,26 +237,26 @@ export default function SessionEntry() {
     if (!safeNote.trim()) {
       toast.error("No note available to export!");
       return;
-    }    
-  
+    }
+
     if (!navigator.onLine) {
       toast.error("Cannot export while offline.");
       return;
     }
-  
+
     const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
-  
+
     const margin = 40;
     const pageWidth = pdf.internal.pageSize.getWidth();
     const maxTextWidth = pageWidth - margin * 2;
     let y = margin;
-  
+
     // Title
     pdf.setFontSize(22);
     pdf.setTextColor(30, 58, 138);
     pdf.text("HALO - Session Report", margin, y);
     y += 40;
-  
+
     // Patient Info
     pdf.setFontSize(13);
     pdf.setTextColor(0, 0, 0);
@@ -266,18 +267,18 @@ export default function SessionEntry() {
       pdf.text(`Session Started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`, margin, y);
       y += 20;
     }
-  
+
     // Divider
     pdf.setDrawColor(180);
     pdf.line(margin, y, pageWidth - margin, y);
     y += 20;
-  
+
     // Section Header
     pdf.setFontSize(16);
     pdf.setTextColor(80, 80, 80);
     pdf.text(`AI-Generated ${noteFormat} Note`, margin, y);
     y += 25;
-  
+
     // Boxed Section Renderer
     const parseSection = (title, content) => {
       if (!content) return;
@@ -288,7 +289,7 @@ export default function SessionEntry() {
       pdf.setTextColor(30, 58, 138);
       pdf.text(title, margin + 10, y + 17);
       y += boxHeight + 10;
-  
+
       pdf.setFontSize(12);
       pdf.setTextColor(60, 60, 60);
       const lines = pdf.splitTextToSize(content, maxTextWidth);
@@ -300,10 +301,10 @@ export default function SessionEntry() {
         pdf.text(line, margin, y);
         y += 16;
       });
-  
+
       y += 10;
     };
-  
+
     // Format-specific parsing
     const parseByFormat = () => {
       if (noteFormat === "DAR") {
@@ -322,16 +323,16 @@ export default function SessionEntry() {
         parseSection("P (Plan)", safeNote.match(/\*\*P \(Plan\):\*\*(.*)/s)?.[1]?.trim() || "");
       }
     };
-  
+
     parseByFormat();
-  
+
     // Nurse Notes
     if (sessionNotes.trim()) {
       if (y > 700) {
         pdf.addPage();
         y = margin;
       }
-  
+
       pdf.setFillColor(220, 250, 220);
       const boxHeight = 24;
       pdf.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 5, 5, "F");
@@ -339,7 +340,7 @@ export default function SessionEntry() {
       pdf.setTextColor(34, 139, 34);
       pdf.text("Nurse Notes", margin + 10, y + 17);
       y += boxHeight + 10;
-  
+
       pdf.setFontSize(12);
       pdf.setTextColor(60, 60, 60);
       const notesLines = pdf.splitTextToSize(sessionNotes, maxTextWidth);
@@ -352,10 +353,10 @@ export default function SessionEntry() {
         y += 16;
       });
     }
-  
+
     pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
     toast.success("✅ PDF exported successfully!");
-  };  
+  };
 
   const handleNotesChange = async (e) => {
     const value = e.target.value;
@@ -371,7 +372,12 @@ export default function SessionEntry() {
   };
 
 
-  const fhirDocument = generateFHIRDocument({ note, patient, generatedAt });
+  const fhirDocument = useMemo(() => {
+    if (!patient || typeof note !== "string" || !note.trim()) {
+      return null;
+    }
+    return generateFHIRDocument({ note, patient, generatedAt });
+  }, [note, patient, generatedAt]);
 
   const handleDownloadFHIR = () => {
     const blob = new Blob([JSON.stringify(fhirDocument, null, 2)], {
@@ -475,18 +481,18 @@ export default function SessionEntry() {
         />
       </div>
       <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-  <label className="text-sm font-medium text-gray-700">Note Format</label>
-  <select
-    value={noteFormat}
-    onChange={(e) => setNoteFormat(e.target.value)}
+        <label className="text-sm font-medium text-gray-700">Note Format</label>
+        <select
+          value={noteFormat}
+          onChange={(e) => setNoteFormat(e.target.value)}
 
-    className="border text-sm rounded px-3 py-2"
-  >
-    <option value="DAR">DAR</option>
-    <option value="SOAP">SOAP</option>
-    <option value="BIRP">BIRP</option>
-  </select>
-</div>
+          className="border text-sm rounded px-3 py-2"
+        >
+          <option value="DAR">DAR</option>
+          <option value="SOAP">SOAP</option>
+          <option value="BIRP">BIRP</option>
+        </select>
+      </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <button
@@ -537,7 +543,10 @@ export default function SessionEntry() {
       </div>
 
 
-      <SummaryViewer note={note} generatedAt={generatedAt} />
+      {note && (
+        <SummaryViewer note={note} generatedAt={generatedAt} />
+      )}
+
 
       {showFHIR && fhirDocument && (
         <div className="bg-white border rounded-lg p-6 text-sm text-gray-700 overflow-x-auto shadow-sm mt-6">
