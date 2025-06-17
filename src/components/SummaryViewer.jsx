@@ -7,21 +7,21 @@ export default function SummaryViewer({ note, format, generatedAt }) {
   // Define section headers and styles per format
   const formatConfig = {
     DAR: [
-      { key: 'D (Data)', title: 'Data (D)', bg: 'bg-gray-100', color: 'text-blue-700' },
-      { key: 'A (Action)', title: 'Action (A)', bg: 'bg-green-100', color: 'text-green-700' },
-      { key: 'R (Response)', title: 'Response (R)', bg: 'bg-yellow-100', color: 'text-yellow-700' }
+      { key: 'Data', title: 'Data (D)', bg: 'bg-gray-100', color: 'text-blue-700' },
+      { key: 'Action', title: 'Action (A)', bg: 'bg-green-100', color: 'text-green-700' },
+      { key: 'Response', title: 'Response (R)', bg: 'bg-yellow-100', color: 'text-yellow-700' }
     ],
     SOAP: [
-      { key: 'S (Subjective)', title: 'Subjective (S)', bg: 'bg-gray-100', color: 'text-blue-700' },
-      { key: 'O (Objective)', title: 'Objective (O)', bg: 'bg-green-100', color: 'text-green-700' },
-      { key: 'A (Assessment)', title: 'Assessment (A)', bg: 'bg-yellow-100', color: 'text-yellow-700' },
-      { key: 'P (Plan)', title: 'Plan (P)', bg: 'bg-pink-100', color: 'text-pink-700' }
+      { key: 'Subjective', title: 'Subjective (S)', bg: 'bg-gray-100', color: 'text-blue-700' },
+      { key: 'Objective', title: 'Objective (O)', bg: 'bg-green-100', color: 'text-green-700' },
+      { key: 'Assessment', title: 'Assessment (A)', bg: 'bg-yellow-100', color: 'text-yellow-700' },
+      { key: 'Plan', title: 'Plan (P)', bg: 'bg-pink-100', color: 'text-pink-700' }
     ],
     BIRP: [
-      { key: 'B (Behavior)', title: 'Behavior (B)', bg: 'bg-gray-100', color: 'text-blue-700' },
-      { key: 'I (Intervention)', title: 'Intervention (I)', bg: 'bg-green-100', color: 'text-green-700' },
-      { key: 'R (Response)', title: 'Response (R)', bg: 'bg-yellow-100', color: 'text-yellow-700' },
-      { key: 'P (Plan)', title: 'Plan (P)', bg: 'bg-pink-100', color: 'text-pink-700' }
+      { key: 'Behavior', title: 'Behavior (B)', bg: 'bg-gray-100', color: 'text-blue-700' },
+      { key: 'Intervention', title: 'Intervention (I)', bg: 'bg-green-100', color: 'text-green-700' },
+      { key: 'Response', title: 'Response (R)', bg: 'bg-yellow-100', color: 'text-yellow-700' },
+      { key: 'Plan', title: 'Plan (P)', bg: 'bg-pink-100', color: 'text-pink-700' }
     ]
   };
 
@@ -30,8 +30,7 @@ export default function SummaryViewer({ note, format, generatedAt }) {
 
   // Extract content between headers, allowing bold or plain headings
   const extractSection = (text, key) => {
-    // Regex matches **Key**: or Key: (bold or not), then captures until next header
-    const pattern = `(?:\\*\\*)?${key}(?:\\*\\*)?[\\s]*[:\-]?[\\s]*([\\s\\S]*?)(?=(?:\\n(?:\\*\\*)?(?:${headerKeys})(?:\\*\\*)?[\\s]*[:\-]?)|$)`;
+    const pattern = `(?:\\*\\*)?${key}(?:\\*\\*)?[\\s]*[:\\-]?[\\s]*([\\s\\S]*?)(?=(?:\\n(?:\\*\\*)?(?:${headerKeys})(?:\\*\\*)?[\\s]*[:\\-]?)|$)`;
     const regex = new RegExp(pattern, 'i');
     const match = text.match(regex);
     return match ? match[1].trim() : '';
