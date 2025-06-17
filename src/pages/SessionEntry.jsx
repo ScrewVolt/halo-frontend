@@ -217,7 +217,7 @@ export default function SessionEntry() {
         sessionId
       );
       await updateDoc(sessionRef, {
-        note: data.dar.trim(),
+        note: data.note.trim(),
         generatedAt: now,
         lastUsedAt: now,
       });
