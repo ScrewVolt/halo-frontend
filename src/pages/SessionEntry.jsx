@@ -189,30 +189,30 @@ export default function SessionEntry() {
   const handleGenerateSummary = async () => {
     if (!messages.length) return;
     setLoadingSummary(true);
-  
+
     const chatText = messages.map(m => m.text).join("\n");
-  
+
     try {
       const res = await fetch("https://halo-back.onrender.com/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: chatText, format: noteFormat }),
       });
-  
+
       if (!res.ok) {
         // Attempt to parse an error message from the body
         const errorData = await res.json().catch(() => ({}));
         console.error("Summary API error:", errorData);
         throw new Error(errorData.error || "Failed to fetch summary");
       }
-  
+
       const data = await res.json();
       if (!data.note) throw new Error("No note returned from backend");
-  
+
       const now = new Date().toISOString();
       setNote(data.note.trim());
       setGeneratedAt(now);
-  
+
       // Persist to Firestore
       const sessionRef = doc(
         db,
@@ -228,7 +228,7 @@ export default function SessionEntry() {
         generatedAt: now,
         lastUsedAt: now,
       });
-  
+
       // **Show a success toast**
       toast.success("✅ Summary generated successfully!");
     } catch (err) {
@@ -238,7 +238,7 @@ export default function SessionEntry() {
       setLoadingSummary(false);
     }
   };
-  
+
 
   const handleExport = async () => {
     const safeNote = typeof note === "string" ? note : String(note);
@@ -493,14 +493,18 @@ export default function SessionEntry() {
         <label className="text-sm font-medium text-gray-700">Note Format</label>
         <select
           value={noteFormat}
-          onChange={(e) => setNoteFormat(e.target.value)}
-
+          onChange={(e) => {
+            setNoteFormat(e.target.value);
+            setNote("");
+            setGeneratedAt(null);
+          }}
           className="border text-sm rounded px-3 py-2"
         >
           <option value="DAR">DAR</option>
           <option value="SOAP">SOAP</option>
           <option value="BIRP">BIRP</option>
         </select>
+
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
