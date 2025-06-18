@@ -247,7 +247,6 @@ export default function SessionEntry() {
       toast.error("No note available to export!");
       return;
     }
-  
     if (!navigator.onLine) {
       toast.error("Cannot export while offline.");
       return;
@@ -291,9 +290,12 @@ export default function SessionEntry() {
     pdf.text(`AI-Generated ${noteFormat} Note`, margin, y);
     y += 25;
   
-    // Render a titled box + its content
-    const parseSection = (title, content) => {
+    let anyPrinted = false;
+  
+    // helper to draw a section box + text
+    const renderSection = (title, content) => {
       if (!content) return;
+      anyPrinted = true;
       pdf.setFillColor(240, 245, 255);
       const boxHeight = 24;
       pdf.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 5, 5, "F");
@@ -316,73 +318,83 @@ export default function SessionEntry() {
       y += 10;
     };
   
-    // Pull out each section with [\s\S] instead of dot-all
-    const parseByFormat = () => {
-      if (noteFormat === "DAR") {
-        parseSection(
-          "D (Data)",
-          safeNote.match(/\*\*D \(Data\):\*\*([\s\S]*?)(?=\*\*A|\*\*R|$)/)?.[1]?.trim() || ""
-        );
-        parseSection(
-          "A (Action)",
-          safeNote.match(/\*\*A \(Action\):\*\*([\s\S]*?)(?=\*\*R|$)/)?.[1]?.trim() || ""
-        );
-        parseSection(
-          "R (Response)",
-          safeNote.match(/\*\*R \(Response\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
-        );
-      } else if (noteFormat === "SOAP") {
-        parseSection(
-          "S (Subjective)",
-          safeNote.match(/\*\*S \(Subjective\):\*\*([\s\S]*?)(?=\*\*O|\*\*A|\*\*P|$)/)?.[1]?.trim() || ""
-        );
-        parseSection(
-          "O (Objective)",
-          safeNote.match(/\*\*O \(Objective\):\*\*([\s\S]*?)(?=\*\*A|\*\*P|$)/)?.[1]?.trim() || ""
-        );
-        parseSection(
-          "A (Assessment)",
-          safeNote.match(/\*\*A \(Assessment\):\*\*([\s\S]*?)(?=\*\*P|$)/)?.[1]?.trim() || ""
-        );
-        parseSection(
-          "P (Plan)",
-          safeNote.match(/\*\*P \(Plan\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
-        );
-      } else if (noteFormat === "BIRP") {
-        parseSection(
-          "B (Behavior)",
-          safeNote.match(/\*\*B \(Behavior\):\*\*([\s\S]*?)(?=\*\*I|\*\*R|\*\*P|$)/)?.[1]?.trim() || ""
-        );
-        parseSection(
-          "I (Intervention)",
-          safeNote.match(/\*\*I \(Intervention\):\*\*([\s\S]*?)(?=\*\*R|\*\*P|$)/)?.[1]?.trim() || ""
-        );
-        parseSection(
-          "R (Response)",
-          safeNote.match(/\*\*R \(Response\):\*\*([\s\S]*?)(?=\*\*P|$)/)?.[1]?.trim() || ""
-        );
-        parseSection(
-          "P (Plan)",
-          safeNote.match(/\*\*P \(Plan\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
-        );
-      }
-    };
+    // do format-specific parsing with dot-all regex
+    if (noteFormat === "DAR") {
+      renderSection(
+        "D (Data)",
+        safeNote.match(/\*\*D \(Data\):\*\*([\s\S]*?)(?=\*\*A|\*\*R|$)/)?.[1]?.trim() || ""
+      );
+      renderSection(
+        "A (Action)",
+        safeNote.match(/\*\*A \(Action\):\*\*([\s\S]*?)(?=\*\*R|$)/)?.[1]?.trim() || ""
+      );
+      renderSection(
+        "R (Response)",
+        safeNote.match(/\*\*R \(Response\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
+      );
+    } else if (noteFormat === "SOAP") {
+      renderSection(
+        "S (Subjective)",
+        safeNote.match(/\*\*S \(Subjective\):\*\*([\s\S]*?)(?=\*\*O|\*\*A|\*\*P|$)/)?.[1]?.trim() || ""
+      );
+      renderSection(
+        "O (Objective)",
+        safeNote.match(/\*\*O \(Objective\):\*\*([\s\S]*?)(?=\*\*A|\*\*P|$)/)?.[1]?.trim() || ""
+      );
+      renderSection(
+        "A (Assessment)",
+        safeNote.match(/\*\*A \(Assessment\):\*\*([\s\S]*?)(?=\*\*P|$)/)?.[1]?.trim() || ""
+      );
+      renderSection(
+        "P (Plan)",
+        safeNote.match(/\*\*P \(Plan\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
+      );
+    } else if (noteFormat === "BIRP") {
+      renderSection(
+        "B (Behavior)",
+        safeNote.match(/\*\*B \(Behavior\):\*\*([\s\S]*?)(?=\*\*I|\*\*R|\*\*P|$)/)?.[1]?.trim() || ""
+      );
+      renderSection(
+        "I (Intervention)",
+        safeNote.match(/\*\*I \(Intervention\):\*\*([\s\S]*?)(?=\*\*R|\*\*P|$)/)?.[1]?.trim() || ""
+      );
+      renderSection(
+        "R (Response)",
+        safeNote.match(/\*\*R \(Response\):\*\*([\s\S]*?)(?=\*\*P|$)/)?.[1]?.trim() || ""
+      );
+      renderSection(
+        "P (Plan)",
+        safeNote.match(/\*\*P \(Plan\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
+      );
+    }
   
-    parseByFormat();
+    // fallback to dumping whole note if nothing matched
+    if (!anyPrinted) {
+      pdf.setFontSize(12);
+      pdf.setTextColor(60, 60, 60);
+      safeNote.split("\n").forEach((line) => {
+        if (y > 750) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += 16;
+      });
+    }
   
-    // Optional nurse notes at bottom
+    // optionally add nurse notes
     if (sessionNotes.trim()) {
       if (y > 700) {
         pdf.addPage();
         y = margin;
       }
       pdf.setFillColor(220, 250, 220);
-      const boxHeight = 24;
-      pdf.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 5, 5, "F");
+      const boxH = 24;
+      pdf.roundedRect(margin, y, pageWidth - margin * 2, boxH, 5, 5, "F");
       pdf.setFontSize(13);
       pdf.setTextColor(34, 139, 34);
       pdf.text("Nurse Notes", margin + 10, y + 17);
-      y += boxHeight + 10;
+      y += boxH + 10;
   
       pdf.setFontSize(12);
       pdf.setTextColor(60, 60, 60);
@@ -399,6 +411,7 @@ export default function SessionEntry() {
     pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
     toast.success("✅ PDF exported successfully!");
   };
+  
   
 
   const handleNotesChange = async (e) => {
