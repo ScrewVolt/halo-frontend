@@ -241,7 +241,7 @@ export default function SessionEntry() {
 
 
   const handleExport = async () => {
-    if (!note || !note.trim()) {
+    if (!note?.trim()) {
       toast.error("No note available to export!");
       return;
     }
@@ -252,19 +252,19 @@ export default function SessionEntry() {
   
     const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
     const margin = 40;
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const maxWidth = pageWidth - margin * 2;
+    const pageW = pdf.internal.pageSize.getWidth();
+    const maxW = pageW - margin * 2;
     let y = margin;
   
-    // Title
+    // — HEADER —
     pdf.setFontSize(22);
-    pdf.setTextColor(30, 58, 138);
+    pdf.setTextColor(30,58,138);
     pdf.text("HALO - Session Report", margin, y);
     y += 36;
   
-    // Patient Info
+    // Patient / session info
     pdf.setFontSize(12);
-    pdf.setTextColor(0, 0, 0);
+    pdf.setTextColor(0,0,0);
     if (patient?.name) pdf.text(`Patient: ${patient.name}`, margin, y);
     if (patient?.room) pdf.text(`Room #: ${patient.room}`, margin + 250, y);
     y += 18;
@@ -277,103 +277,117 @@ export default function SessionEntry() {
       y += 18;
     }
   
-    // Divider
     pdf.setDrawColor(200);
-    pdf.line(margin, y, pageWidth - margin, y);
+    pdf.line(margin, y, pageW - margin, y);
     y += 24;
   
-    // Section configurations
-    const sectionMap = {
+    // — SECTION CONFIG —
+    const map = {
       DAR: [
-        { key: "Data",    label: "Data (D)",      bg: [240,245,255], border: [30,58,138] },
-        { key: "Action",  label: "Action (A)",    bg: [235,250,235], border: [34,139,34] },
-        { key: "Response",label: "Response (R)",  bg: [255,250,240], border: [218,165,32] },
+        { key:"Data",      label:"Data (D)",      bg:[240,245,255], border:[30,58,138] },
+        { key:"Action",    label:"Action (A)",    bg:[235,250,235], border:[34,139,34] },
+        { key:"Response",  label:"Response (R)",  bg:[255,250,240], border:[218,165,32] }
       ],
       SOAP: [
-        { key: "Subjective", label: "Subjective (S)", bg: [240,245,255], border: [30,58,138] },
-        { key: "Objective",  label: "Objective (O)",  bg: [235,250,235], border: [34,139,34] },
-        { key: "Assessment", label: "Assessment (A)", bg: [255,250,240], border: [218,165,32] },
-        { key: "Plan",       label: "Plan (P)",       bg: [255,228,225], border: [219,112,147] },
+        { key:"Subjective", label:"Subjective (S)", bg:[240,245,255], border:[30,58,138] },
+        { key:"Objective",  label:"Objective (O)",  bg:[235,250,235], border:[34,139,34] },
+        { key:"Assessment", label:"Assessment (A)", bg:[255,250,240], border:[218,165,32] },
+        { key:"Plan",       label:"Plan (P)",       bg:[255,228,225], border:[219,112,147] }
       ],
       BIRP: [
-        { key: "Behavior",     label: "Behavior (B)",    bg: [240,245,255], border: [30,58,138] },
-        { key: "Intervention", label: "Intervention (I)",bg: [235,250,235], border: [34,139,34] },
-        { key: "Response",     label: "Response (R)",    bg: [255,250,240], border: [218,165,32] },
-        { key: "Plan",         label: "Plan (P)",        bg: [255,228,225], border: [219,112,147] },
-      ],
+        { key:"Behavior",     label:"Behavior (B)",    bg:[240,245,255], border:[30,58,138] },
+        { key:"Intervention", label:"Intervention (I)",bg:[235,250,235], border:[34,139,34] },
+        { key:"Response",     label:"Response (R)",    bg:[255,250,240], border:[218,165,32] },
+        { key:"Plan",         label:"Plan (P)",        bg:[255,228,225], border:[219,112,147] }
+      ]
+    }[noteFormat] || [];
+  
+    // Helper to extract markdown section
+    const extract = (k) => {
+      const rx = new RegExp(
+        `\\*\\*${k}\\s*\\([^)]*\\)?:\\*\\*([\\s\\S]*?)(?=(\\*\\*${map.map(s=>s.key).join("|")}\\s*\\()|$)`,
+        "i"
+      );
+      const m = note.match(rx);
+      return m?.[1]?.trim() ?? "";
     };
   
-    const sections = sectionMap[noteFormat] || [];
+    // — DRAW SECTIONS —
+    map.forEach(({ key, label, bg, border }) => {
+      const text = extract(key);
+      if (!text) return;
   
-    // Helper: pull out the raw markdown under **Key:** or ## Key
-    const getSectionText = (key) => {
-      const re = new RegExp(`\\*\\*${key}\\s*\\([^)]*\\)?:\\*\\*([\\s\\S]*?)(?=(\\*\\*${sections.map(s=>s.key).join("|")}\\s*\\()|$)`, "i");
-      const m = note.match(re);
-      return m ? m[1].trim() : "";
-    };
-  
-    // Draw each section
-    for (let { key, label, bg, border } of sections) {
-      const text = getSectionText(key);
-      if (!text) continue;
-  
-      // Header box
-      const headerH = 20;
+      // header bar
+      const headerH = 22;
       pdf.setFillColor(...bg);
       pdf.setDrawColor(...border);
-      pdf.roundedRect(margin, y, pageWidth - margin*2, headerH, 4, 4, "FD");
+      pdf.roundedRect(margin, y, pageW - margin*2, headerH, 4,4, "FD");
   
       pdf.setFontSize(14);
       pdf.setTextColor(...border);
       pdf.text(label, margin + 8, y + headerH - 6);
-      y += headerH + 8;
+      y += headerH + 6;
   
-      // Body text
+      // body text
       pdf.setFontSize(12);
-      pdf.setTextColor(60, 60, 60);
-      const lines = pdf.splitTextToSize(text, maxWidth);
-      for (let line of lines) {
+      pdf.setTextColor(60,60,60);
+      const lines = pdf.splitTextToSize(text, maxW);
+      lines.forEach(line => {
         if (y > pdf.internal.pageSize.getHeight() - margin) {
           pdf.addPage();
           y = margin;
         }
         pdf.text(line, margin, y);
         y += 16;
-      }
+      });
       y += 12;
+    });
+  
+    // — FALLBACK ENTIRE NOTE IF NOTHING MATCHED —
+    if (y === margin + 36 + map.length * (22 + 6)) {
+      pdf.setFontSize(12);
+      pdf.setTextColor(60,60,60);
+      note.split("\n").forEach(line => {
+        if (y > pdf.internal.pageSize.getHeight() - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += 16;
+      });
     }
   
-    // Optional nurse notes block
+    // — OPTIONAL NURSE NOTES —
     if (sessionNotes.trim()) {
       if (y > pdf.internal.pageSize.getHeight() - margin - 40) {
         pdf.addPage();
         y = margin;
       }
-      const nh = 20;
+      const nh = 22;
       pdf.setFillColor(220,250,220);
-      pdf.roundedRect(margin, y, pageWidth - margin*2, nh, 4,4, "F");
+      pdf.setDrawColor(34,139,34);
+      pdf.roundedRect(margin, y, pageW - margin*2, nh, 4,4,"FD");
       pdf.setFontSize(14);
       pdf.setTextColor(34,139,34);
       pdf.text("Nurse Notes", margin + 8, y + nh - 6);
-      y += nh + 8;
+      y += nh + 6;
   
       pdf.setFontSize(12);
       pdf.setTextColor(60,60,60);
-      const noteLines = pdf.splitTextToSize(sessionNotes, maxWidth);
-      for (let line of noteLines) {
+      const nlines = pdf.splitTextToSize(sessionNotes, maxW);
+      nlines.forEach(line => {
         if (y > pdf.internal.pageSize.getHeight() - margin) {
           pdf.addPage();
           y = margin;
         }
         pdf.text(line, margin, y);
         y += 16;
-      }
+      });
     }
   
     pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
     toast.success("✅ PDF exported successfully!");
-  };
-     
+  };   
 
   const handleNotesChange = async (e) => {
     const value = e.target.value;
