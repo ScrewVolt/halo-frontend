@@ -255,9 +255,9 @@ export default function SessionEntry() {
     // 2) PDF boilerplate
     const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
     const margin = 40;
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const maxW = pageW - margin * 2;
+    const pageW  = pdf.internal.pageSize.getWidth();
+    const pageH  = pdf.internal.pageSize.getHeight();
+    const maxW   = pageW - margin * 2;
     let y = margin;
   
     // 3) Header
@@ -267,9 +267,9 @@ export default function SessionEntry() {
       .text("HALO - Session Report", margin, y);
     y += 36;
   
-    pdf.setFontSize(12).setTextColor(0, 0, 0);
-    if (patient?.name)  pdf.text(`Patient: ${patient.name}`, margin, y);
-    if (patient?.room)  pdf.text(`Room #: ${patient.room}`, margin + 250, y);
+    pdf.setFontSize(12).setTextColor(0,0,0);
+    if (patient?.name) pdf.text(`Patient: ${patient.name}`, margin, y);
+    if (patient?.room) pdf.text(`Room #: ${patient.room}`, margin + 250, y);
     y += 18;
   
     if (startedAt) {
@@ -287,11 +287,11 @@ export default function SessionEntry() {
     let sections = [];
     if (noteFormat === "DAR") {
       sections = [
-        { splitOn: "**Data:**",     label: "Data (D)",     bg: [240,245,255], border: [30,58,138] },
-        { splitOn: "**Action:**",   label: "Action (A)",   bg: [235,250,235], border: [34,139,34]  },
-        { splitOn: "**Response:**", label: "Response (R)", bg: [255,250,240], border: [218,165,32] }
+        { splitOn:"**Data:**",    label:"Data (D)",    bg:[240,245,255], border:[30,58,138] },
+        { splitOn:"**Action:**",  label:"Action (A)",  bg:[235,250,235], border:[34,139,34]  },
+        { splitOn:"**Response:**",label:"Response (R)",bg:[255,250,240], border:[218,165,32] }
       ];
-    } else if (noteFormat === "SOAP") {
+    }else if (noteFormat === "SOAP") {
       sections = [
         { splitOn: "**Subjective:**",  label: "Subjective (S)", bg: [240,245,255], border: [30,58,138] },
         { splitOn: "**Objective:**",   label: "Objective (O)",  bg: [235,250,235], border: [34,139,34]  },
@@ -307,100 +307,92 @@ export default function SessionEntry() {
       ];
     }
   
-    // 5) Draw each section via its own regex
-    let drew = false;
-    const headingPattern = sections.map(s => escapeRegExp(s.splitOn)).join("|");
-    sections.forEach(({ splitOn, label, bg, border }) => {
-      const re = new RegExp(
-        `${escapeRegExp(splitOn)}([\\s\\S]*?)(?=(?:${headingPattern})|$)`,
-        "i"
-      );
-      const m = safeNote.match(re);
-      if (!m || !m[1].trim()) return;
-  
-      drew = true;
-      const content = m[1].trim();
-  
-      // paginate if needed
-      if (y > pageH - margin - 100) {
+    // 5) Draw each section
+  let drew = false;
+  const headingPattern = sections.map(s => escapeRegExp(s.splitOn)).join("|");
+  sections.forEach(({ splitOn, label, bg, border }) => {
+    const re = new RegExp(
+      `${escapeRegExp(splitOn)}([\\s\\S]*?)(?=(?:${headingPattern})|$)`,
+      "i"
+    );
+    const m = safeNote.match(re);
+    if (!m || !m[1].trim()) return;
+
+    drew = true;
+    const content = m[1].trim();
+
+    // paginate if needed
+    if (y > pageH - margin - 100) {
+      pdf.addPage();
+      y = margin;
+    }
+
+    // 6) Boxed header — taller now
+    const headerH = 24;
+    pdf
+      .setFillColor(...bg)
+      .setDrawColor(...border)
+      .roundedRect(margin, y, pageW - margin*2, headerH, 6, 6, "FD")
+      .setFontSize(14)
+      .setTextColor(...border)
+      .text(label, margin + 8, y + headerH - 8);
+
+    // push body *well* below the box
+    y += headerH + 12;
+
+    // 7) Section body
+    pdf.setFontSize(12).setTextColor(60,60,60);
+    pdf.splitTextToSize(content, maxW).forEach(line => {
+      if (y > pageH - margin) {
         pdf.addPage();
         y = margin;
       }
-  
-      // 6) Boxed header
-      const headerH = 20;
-      pdf
-        .setFillColor(...bg)
-        .setDrawColor(...border)
-        .roundedRect(margin, y, pageW - margin * 2, headerH, 6, 6, "FD")
-        .setFontSize(14)
-        .setTextColor(...border)
-        .text(label, margin + 8, y + headerH - 8);
-      y += headerH + 8;
-  
-      // 7) Section body
-      pdf.setFontSize(12).setTextColor(60, 60, 60);
-      const lines = pdf.splitTextToSize(content, maxW);
-      lines.forEach(line => {
-        if (y > pageH - margin) {
-          pdf.addPage();
-          y = margin;
-        }
-        pdf.text(line, margin, y);
-        y += 16;
-      });
-      y += 12;
+      pdf.text(line, margin, y);
+      y += 16;
     });
-  
-    // 8) Fallback: dump whole note
-    if (!drew) {
-      pdf.setFontSize(12).setTextColor(60, 60, 60);
-      safeNote.split("\n").forEach(line => {
-        if (y > pageH - margin) {
-          pdf.addPage();
-          y = margin;
-        }
-        pdf.text(line, margin, y);
-        y += 16;
-      });
-    }
-  
-    // 9) Nurse notes
-    if (sessionNotes.trim()) {
-      if (y > pageH - margin - 60) {
-        pdf.addPage();
-        y = margin;
-      }
-      const nh = 24;
-      pdf
-        .setFillColor(220,250,220)
-        .setDrawColor(34,139,34)
-        .roundedRect(margin, y, pageW - margin * 2, nh, 5,5, "FD")
-        .setFontSize(14)
-        .setTextColor(34,139,34)
-        .text("Nurse Notes", margin + 8, y + nh - 8);
-      y += nh + 8;
-  
-      pdf.setFontSize(12).setTextColor(60, 60, 60);
-      pdf.splitTextToSize(sessionNotes, maxW).forEach(line => {
-        if (y > pageH - margin) {
-          pdf.addPage();
-          y = margin;
-        }
-        pdf.text(line, margin, y);
-        y += 16;
-      });
-    }
-  
-    // 10) Finish
-    pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
-    toast.success("✅ PDF exported successfully!");
+    y += 12;
+  });
+
+  // 8) Fallback if nothing drawn
+  if (!drew) {
+    pdf.setFontSize(12).setTextColor(60,60,60);
+    safeNote.split("\n").forEach(line => {
+      if (y > pageH - margin) { pdf.addPage(); y = margin; }
+      pdf.text(line, margin, y);
+      y += 16;
+    });
   }
-    
-  // simple regex-escaper
-  function escapeRegExp(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  // 9) Nurse notes
+  if (sessionNotes.trim()) {
+    if (y > pageH - margin - 60) { pdf.addPage(); y = margin; }
+    const nh = 24;
+    pdf
+      .setFillColor(220,250,220)
+      .setDrawColor(34,139,34)
+      .roundedRect(margin, y, pageW - margin*2, nh, 5,5,"FD")
+      .setFontSize(14)
+      .setTextColor(34,139,34)
+      .text("Nurse Notes", margin+8, y + nh - 8);
+
+    y += nh + 12;
+    pdf.setFontSize(12).setTextColor(60,60,60);
+    pdf.splitTextToSize(sessionNotes, maxW).forEach(line => {
+      if (y > pageH - margin) { pdf.addPage(); y = margin; }
+      pdf.text(line, margin, y);
+      y += 16;
+    });
   }
+
+  // 10) Save
+  pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
+  toast.success("✅ PDF exported successfully!");
+}
+
+// escape helper
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
   
   
   const handleNotesChange = async (e) => {
