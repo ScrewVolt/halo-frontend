@@ -570,10 +570,12 @@ function escapeRegExp(s) {
         >
           Export PDF
         </button>
-        {note && (
+  
+        {/* only show FHIR controls if we actually have a document */}
+        {fhirDocument && (
           <>
             <button
-              onClick={() => setShowFHIR(!showFHIR)}
+              onClick={() => setShowFHIR((prev) => !prev)}
               className="bg-gray-700 hover:bg-black text-white px-4 py-2 rounded"
             >
               {showFHIR ? "Hide FHIR JSON" : "Preview FHIR JSON"}
@@ -586,7 +588,6 @@ function escapeRegExp(s) {
             </button>
             <button
               onClick={handleSendFHIR}
-              disabled={!fhirDocument}
               className={`px-4 py-2 rounded text-white ${
                 fhirDocument
                   ? "bg-blue-700 hover:bg-blue-800"
@@ -609,19 +610,13 @@ function escapeRegExp(s) {
       )}
   
       {/* FHIR JSON preview */}
-      {showFHIR && (
+      {showFHIR && fhirDocument && (
         <div className="bg-white border rounded-lg p-6 text-sm text-gray-700 overflow-x-auto shadow-sm mt-6">
           <h3 className="text-lg font-bold text-blue-700 mb-4">
             FHIR DocumentReference Preview
           </h3>
           <div className="bg-gray-100 p-4 rounded overflow-x-auto text-xs font-mono whitespace-pre-wrap leading-relaxed">
-            {fhirDocument ? (
-              <pre>{JSON.stringify(fhirDocument, null, 2)}</pre>
-            ) : (
-              <p className="text-center text-gray-500">
-                No FHIR document to show.
-              </p>
-            )}
+            <pre>{JSON.stringify(fhirDocument, null, 2)}</pre>
           </div>
           <div className="flex flex-wrap gap-3 mt-4">
             <button
@@ -653,5 +648,6 @@ function escapeRegExp(s) {
         />
       </div>
     </div>
-  );  
+  );
+  
 }
