@@ -541,6 +541,11 @@ const handleSendFHIR = async () => {
   <label htmlFor="noteFormat" className="text-sm font-medium text-gray-700">
     Note Format
   </label>
+  {/* Note format selector */}
+<div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+  <label htmlFor="noteFormat" className="text-sm font-medium text-gray-700">
+    Note Format
+  </label>
   <div className="relative inline-block w-40">
     <select
       id="noteFormat"
@@ -550,14 +555,13 @@ const handleSendFHIR = async () => {
         setNote("")
         setGeneratedAt(null)
       }}
-      className="block w-full bg-white border border-gray-300 rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+      className="block w-full appearance-none bg-white border border-gray-300 rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
     >
       <option value="DAR">DAR</option>
       <option value="SOAP">SOAP</option>
       <option value="BIRP">BIRP</option>
     </select>
     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-      {/* Heroicon: chevron-down */}
       <svg
         className="h-4 w-4 text-gray-500"
         xmlns="http://www.w3.org/2000/svg"
@@ -569,6 +573,8 @@ const handleSendFHIR = async () => {
       </svg>
     </div>
   </div>
+</div>
+
 </div>
 
   
