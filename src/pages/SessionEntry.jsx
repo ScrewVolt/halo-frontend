@@ -454,6 +454,7 @@ function escapeRegExp(s) {
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto p-4">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-blue-800 mb-2">
           Session with {patient?.name || "Patient"}
@@ -475,10 +476,16 @@ function escapeRegExp(s) {
           </div>
         )}
       </div>
-
+  
+      {/* Chat messages */}
       <div className="border rounded p-4 bg-gray-50 min-h-[300px] max-h-[500px] overflow-y-auto">
         {messages.map((msg) => (
-          <ChatMessage key={msg.id} msg={msg} patientId={patientId} sessionId={sessionId} />
+          <ChatMessage
+            key={msg.id}
+            msg={msg}
+            patientId={patientId}
+            sessionId={sessionId}
+          />
         ))}
         {recognizing && (
           <p className="text-xs text-blue-500 italic animate-pulse mt-2">
@@ -486,13 +493,16 @@ function escapeRegExp(s) {
           </p>
         )}
       </div>
-
+  
+      {/* Live transcript */}
       {liveTranscript && (
         <div className="bg-white border rounded-lg p-3 text-sm shadow-sm">
-          <span className="font-semibold text-gray-600">Transcript:</span> {liveTranscript}
+          <span className="font-semibold text-gray-600">Transcript:</span>{" "}
+          {liveTranscript}
         </div>
       )}
-
+  
+      {/* Input & send */}
       <div className="flex flex-col sm:flex-row gap-2">
         <input
           className="flex-1 border p-2 rounded text-sm"
@@ -508,15 +518,21 @@ function escapeRegExp(s) {
           Send
         </button>
       </div>
+  
+      {/* Voice toggle */}
       <div className="flex flex-col sm:flex-row gap-2">
         <VoiceToggle
           recognizing={recognizing}
           speaker={speaker}
-          onToggleSpeaker={() => setSpeaker((prev) => (prev === "nurse" ? "patient" : "nurse"))}
+          onToggleSpeaker={() =>
+            setSpeaker((prev) => (prev === "nurse" ? "patient" : "nurse"))
+          }
           onStart={startRecognition}
           onStop={stopRecognition}
         />
       </div>
+  
+      {/* Note format selector */}
       <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
         <label className="text-sm font-medium text-gray-700">Note Format</label>
         <select
@@ -532,9 +548,9 @@ function escapeRegExp(s) {
           <option value="SOAP">SOAP</option>
           <option value="BIRP">BIRP</option>
         </select>
-
       </div>
-
+  
+      {/* Action buttons */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-2">
         <button
           onClick={handleGenerateSummary}
@@ -543,18 +559,17 @@ function escapeRegExp(s) {
         >
           {loadingSummary ? "Generating..." : "Generate Summary"}
         </button>
-
         <button
           onClick={handleExport}
           disabled={!note && !sessionNotes}
-          className={`px-4 py-2 rounded text-white ${note || sessionNotes
-            ? "bg-indigo-600 hover:bg-indigo-700"
-            : "bg-gray-400 cursor-not-allowed"
-            }`}
+          className={`px-4 py-2 rounded text-white ${
+            note || sessionNotes
+              ? "bg-indigo-600 hover:bg-indigo-700"
+              : "bg-gray-400 cursor-not-allowed"
+          }`}
         >
           Export PDF
         </button>
-
         {note && (
           <>
             <button
@@ -572,31 +587,42 @@ function escapeRegExp(s) {
             <button
               onClick={handleSendFHIR}
               disabled={!fhirDocument}
-              className={`px-4 py-2 rounded text-white ${fhirDocument
-                ? "bg-blue-700 hover:bg-blue-800"
-                : "bg-gray-400 cursor-not-allowed"
-                }`}
+              className={`px-4 py-2 rounded text-white ${
+                fhirDocument
+                  ? "bg-blue-700 hover:bg-blue-800"
+                  : "bg-gray-400 cursor-not-allowed"
+              }`}
             >
               Send to Sandbox
             </button>
           </>
         )}
       </div>
-
-
+  
+      {/* Summary viewer */}
       {note && (
-        <SummaryViewer note={note} format={noteFormat} generatedAt={generatedAt} />
+        <SummaryViewer
+          note={note}
+          format={noteFormat}
+          generatedAt={generatedAt}
+        />
       )}
-
-
-      {showFHIR && fhirDocument && (
+  
+      {/* FHIR JSON preview */}
+      {showFHIR && (
         <div className="bg-white border rounded-lg p-6 text-sm text-gray-700 overflow-x-auto shadow-sm mt-6">
-          <h3 className="text-lg font-bold text-blue-700 mb-4">FHIR DocumentReference Preview</h3>
-
+          <h3 className="text-lg font-bold text-blue-700 mb-4">
+            FHIR DocumentReference Preview
+          </h3>
           <div className="bg-gray-100 p-4 rounded overflow-x-auto text-xs font-mono whitespace-pre-wrap leading-relaxed">
-            <pre>{JSON.stringify(fhirDocument, null, 2)}</pre>
+            {fhirDocument ? (
+              <pre>{JSON.stringify(fhirDocument, null, 2)}</pre>
+            ) : (
+              <p className="text-center text-gray-500">
+                No FHIR document to show.
+              </p>
+            )}
           </div>
-
           <div className="flex flex-wrap gap-3 mt-4">
             <button
               onClick={handleDownloadFHIR}
@@ -610,22 +636,22 @@ function escapeRegExp(s) {
             >
               Send to Sandbox
             </button>
-
           </div>
         </div>
       )}
-
-
+  
+      {/* Nurse notes */}
       <div>
-        <h3 className="text-lg font-semibold text-green-700 mb-2">Nurse Notes</h3>
+        <h3 className="text-lg font-semibold text-green-700 mb-2">
+          Nurse Notes
+        </h3>
         <textarea
           className="w-full border rounded p-2 text-sm bg-white min-h-[100px]"
           value={sessionNotes}
           onChange={handleNotesChange}
           placeholder="Enter session notes..."
         />
-
       </div>
     </div>
-  );
+  );  
 }
