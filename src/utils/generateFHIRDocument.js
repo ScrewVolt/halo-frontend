@@ -1,9 +1,10 @@
+// src/utils/generateFHIRDocument.js
 import { encode } from "js-base64";
 
 export default function generateFHIRDocument({ note, patient, generatedAt }) {
   if (!note) return null;
 
-  const base64Dar = encode(note);
+  const base64Markdown = encode(note);
 
   return {
     resourceType: "DocumentReference",
@@ -13,14 +14,14 @@ export default function generateFHIRDocument({ note, patient, generatedAt }) {
         {
           system: "http://loinc.org",
           code: "34108-1",
-          display: "Outpatient Note"
-        }
-      ]
+          display: "Outpatient Note",
+        },
+      ],
     },
+    // point at your patient in the sandbox (you can npm import uuid if you want to generate your own ID)
     subject: {
-      // use the real patient id if you have one
-      reference: patient?.id ? `Patient/${patient.id}` : "Patient/example",
-      display: patient?.name || "Patient"
+      reference: patient?.id ? `Patient/${patient.id}` : undefined,
+      display: patient?.name || "Patient",
     },
     date: generatedAt || new Date().toISOString(),
     description: "AI-generated nursing summary",
@@ -28,9 +29,11 @@ export default function generateFHIRDocument({ note, patient, generatedAt }) {
       {
         attachment: {
           contentType: "text/markdown",
-          data: base64Dar
-        }
-      }
-    ]
+          data: base64Markdown,
+          title: `${patient?.name || "Patient"} Note`,
+          creation: generatedAt || new Date().toISOString(),
+        },
+      },
+    ],
   };
 }
