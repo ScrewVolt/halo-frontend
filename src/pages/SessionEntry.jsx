@@ -241,7 +241,9 @@ export default function SessionEntry() {
 
 
   const handleExport = async () => {
-    if (!note?.trim()) {
+    // turn note into a string
+    const safeNote = typeof note === "string" ? note : String(note);
+    if (!safeNote.trim()) {
       toast.error("No note available to export!");
       return;
     }
@@ -262,7 +264,7 @@ export default function SessionEntry() {
     pdf.text("HALO - Session Report", margin, y);
     y += 36;
   
-    // Patient / session info
+    // — PATIENT INFO —
     pdf.setFontSize(12);
     pdf.setTextColor(0,0,0);
     if (patient?.name) pdf.text(`Patient: ${patient.name}`, margin, y);
@@ -276,52 +278,54 @@ export default function SessionEntry() {
       );
       y += 18;
     }
-  
     pdf.setDrawColor(200);
     pdf.line(margin, y, pageW - margin, y);
     y += 24;
   
-    // — SECTION CONFIG —
-    const map = {
+    // — SECTION CONFIGURATION —
+    const formatConfig = {
       DAR: [
-        { key:"Data",      label:"Data (D)",      bg:[240,245,255], border:[30,58,138] },
-        { key:"Action",    label:"Action (A)",    bg:[235,250,235], border:[34,139,34] },
-        { key:"Response",  label:"Response (R)",  bg:[255,250,240], border:[218,165,32] }
+        { key: "D \\(Data\\)",    label: "D (Data)",    bg: [240,245,255], border: [30,58,138] },
+        { key: "A \\(Action\\)",  label: "A (Action)",  bg: [235,250,235], border: [34,139,34] },
+        { key: "R \\(Response\\)",label: "R (Response)",bg: [255,250,240], border: [218,165,32] }
       ],
       SOAP: [
-        { key:"Subjective", label:"Subjective (S)", bg:[240,245,255], border:[30,58,138] },
-        { key:"Objective",  label:"Objective (O)",  bg:[235,250,235], border:[34,139,34] },
-        { key:"Assessment", label:"Assessment (A)", bg:[255,250,240], border:[218,165,32] },
-        { key:"Plan",       label:"Plan (P)",       bg:[255,228,225], border:[219,112,147] }
+        { key: "S \\(Subjective\\)", label: "S (Subjective)", bg: [240,245,255], border: [30,58,138] },
+        { key: "O \\(Objective\\)",  label: "O (Objective)",  bg: [235,250,235], border: [34,139,34] },
+        { key: "A \\(Assessment\\)", label: "A (Assessment)", bg: [255,250,240], border: [218,165,32] },
+        { key: "P \\(Plan\\)",       label: "P (Plan)",       bg: [255,228,225], border: [219,112,147] }
       ],
       BIRP: [
-        { key:"Behavior",     label:"Behavior (B)",    bg:[240,245,255], border:[30,58,138] },
-        { key:"Intervention", label:"Intervention (I)",bg:[235,250,235], border:[34,139,34] },
-        { key:"Response",     label:"Response (R)",    bg:[255,250,240], border:[218,165,32] },
-        { key:"Plan",         label:"Plan (P)",        bg:[255,228,225], border:[219,112,147] }
+        { key: "B \\(Behavior\\)",     label: "B (Behavior)",    bg: [240,245,255], border: [30,58,138] },
+        { key: "I \\(Intervention\\)", label: "I (Intervention)",bg: [235,250,235], border: [34,139,34] },
+        { key: "R \\(Response\\)",     label: "R (Response)",    bg: [255,250,240], border: [218,165,32] },
+        { key: "P \\(Plan\\)",         label: "P (Plan)",        bg: [255,228,225], border: [219,112,147] }
       ]
-    }[noteFormat] || [];
+    };
+    const sections = formatConfig[noteFormat] || [];
+    // build the look‐ahead group for regex
+    const allKeys = sections.map(s => s.key).join("|");
   
-    // Helper to extract markdown section
-    const extract = (k) => {
-      const rx = new RegExp(
-        `\\*\\*${k}\\s*\\([^)]*\\)?:\\*\\*([\\s\\S]*?)(?=(\\*\\*${map.map(s=>s.key).join("|")}\\s*\\()|$)`,
-        "i"
-      );
-      const m = note.match(rx);
-      return m?.[1]?.trim() ?? "";
+    // helper to extract text
+    const parseSection = (regexKey) => {
+      const rx = new RegExp(`\\*\\*${regexKey}:\\*\\*([\\s\\S]*?)(?=(?:\\*\\*(?:${allKeys}):\\*\\*)|$)`, "i");
+      const m = safeNote.match(rx);
+      return m?.[1]?.trim() || "";
     };
   
-    // — DRAW SECTIONS —
-    map.forEach(({ key, label, bg, border }) => {
-      const text = extract(key);
-      if (!text) return;
+    // — DRAW EACH SECTION —
+    let drewSomething = false;
+    for (const { key, label, bg, border } of sections) {
+      const body = parseSection(key);
+      if (!body) continue;
   
-      // header bar
+      drewSomething = true;
+  
+      // header box
       const headerH = 22;
       pdf.setFillColor(...bg);
       pdf.setDrawColor(...border);
-      pdf.roundedRect(margin, y, pageW - margin*2, headerH, 4,4, "FD");
+      pdf.roundedRect(margin, y, pageW - margin*2, headerH, 4, 4, "FD");
   
       pdf.setFontSize(14);
       pdf.setTextColor(...border);
@@ -331,33 +335,33 @@ export default function SessionEntry() {
       // body text
       pdf.setFontSize(12);
       pdf.setTextColor(60,60,60);
-      const lines = pdf.splitTextToSize(text, maxW);
-      lines.forEach(line => {
+      const lines = pdf.splitTextToSize(body, maxW);
+      for (const line of lines) {
         if (y > pdf.internal.pageSize.getHeight() - margin) {
           pdf.addPage();
           y = margin;
         }
         pdf.text(line, margin, y);
         y += 16;
-      });
+      }
       y += 12;
-    });
-  
-    // — FALLBACK ENTIRE NOTE IF NOTHING MATCHED —
-    if (y === margin + 36 + map.length * (22 + 6)) {
-      pdf.setFontSize(12);
-      pdf.setTextColor(60,60,60);
-      note.split("\n").forEach(line => {
-        if (y > pdf.internal.pageSize.getHeight() - margin) {
-          pdf.addPage();
-          y = margin;
-        }
-        pdf.text(line, margin, y);
-        y += 16;
-      });
     }
   
-    // — OPTIONAL NURSE NOTES —
+    // — FALLBACK: whole note if nothing parsed —
+    if (!drewSomething) {
+      pdf.setFontSize(12);
+      pdf.setTextColor(60,60,60);
+      for (const line of safeNote.split("\n")) {
+        if (y > pdf.internal.pageSize.getHeight() - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += 16;
+      }
+    }
+  
+    // — NURSE NOTES BOX —
     if (sessionNotes.trim()) {
       if (y > pdf.internal.pageSize.getHeight() - margin - 40) {
         pdf.addPage();
@@ -366,7 +370,7 @@ export default function SessionEntry() {
       const nh = 22;
       pdf.setFillColor(220,250,220);
       pdf.setDrawColor(34,139,34);
-      pdf.roundedRect(margin, y, pageW - margin*2, nh, 4,4,"FD");
+      pdf.roundedRect(margin, y, pageW - margin*2, nh, 4,4, "FD");
       pdf.setFontSize(14);
       pdf.setTextColor(34,139,34);
       pdf.text("Nurse Notes", margin + 8, y + nh - 6);
@@ -374,15 +378,15 @@ export default function SessionEntry() {
   
       pdf.setFontSize(12);
       pdf.setTextColor(60,60,60);
-      const nlines = pdf.splitTextToSize(sessionNotes, maxW);
-      nlines.forEach(line => {
+      const nl = pdf.splitTextToSize(sessionNotes, maxW);
+      for (const l of nl) {
         if (y > pdf.internal.pageSize.getHeight() - margin) {
           pdf.addPage();
           y = margin;
         }
-        pdf.text(line, margin, y);
+        pdf.text(l, margin, y);
         y += 16;
-      });
+      }
     }
   
     pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
