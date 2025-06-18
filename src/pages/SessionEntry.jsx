@@ -477,7 +477,7 @@ function escapeRegExp(s) {
         )}
       </div>
   
-      {/* Chat messages */}
+      {/* Chat window */}
       <div className="border rounded p-4 bg-gray-50 min-h-[300px] max-h-[500px] overflow-y-auto">
         {messages.map((msg) => (
           <ChatMessage
@@ -502,7 +502,7 @@ function escapeRegExp(s) {
         </div>
       )}
   
-      {/* Input & send */}
+      {/* Message input */}
       <div className="flex flex-col sm:flex-row gap-2">
         <input
           className="flex-1 border p-2 rounded text-sm"
@@ -519,7 +519,7 @@ function escapeRegExp(s) {
         </button>
       </div>
   
-      {/* Voice toggle */}
+      {/* Voice controls */}
       <div className="flex flex-col sm:flex-row gap-2">
         <VoiceToggle
           recognizing={recognizing}
@@ -571,8 +571,8 @@ function escapeRegExp(s) {
           Export PDF
         </button>
   
-        {/* only show FHIR controls if we actually have a document */}
-        {fhirDocument && (
+        {/* FHIR buttons appear whenever there is a note */}
+        {note && (
           <>
             <button
               onClick={() => setShowFHIR((prev) => !prev)}
@@ -609,14 +609,20 @@ function escapeRegExp(s) {
         />
       )}
   
-      {/* FHIR JSON preview */}
-      {showFHIR && fhirDocument && (
+      {/* FHIR JSON preview panel */}
+      {showFHIR && (
         <div className="bg-white border rounded-lg p-6 text-sm text-gray-700 overflow-x-auto shadow-sm mt-6">
           <h3 className="text-lg font-bold text-blue-700 mb-4">
             FHIR DocumentReference Preview
           </h3>
           <div className="bg-gray-100 p-4 rounded overflow-x-auto text-xs font-mono whitespace-pre-wrap leading-relaxed">
-            <pre>{JSON.stringify(fhirDocument, null, 2)}</pre>
+            {fhirDocument ? (
+              <pre>{JSON.stringify(fhirDocument, null, 2)}</pre>
+            ) : (
+              <p className="text-center text-gray-500">
+                No FHIR document to show.
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-3 mt-4">
             <button
@@ -649,5 +655,6 @@ function escapeRegExp(s) {
       </div>
     </div>
   );
+  
   
 }
