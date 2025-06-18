@@ -426,31 +426,34 @@ function escapeRegExp(s) {
     link.click();
   };
 
-  const handleSendFHIR = async () => {
-    if (!fhirDocument) {
-      toast.error("No FHIR document available to send!");
-      return;
+// inside your SessionEntry component:
+
+const handleSendFHIR = async () => {
+  if (!fhirDocument) {
+    return toast.error("🚫 No FHIR document available to send!");
+  }
+
+  const sendToast = toast.loading("📡 Sending to Sandbox...");
+  try {
+    const res = await fetch("https://hapi.fhir.org/baseR4/DocumentReference", {
+      method: "POST",
+      headers: { "Content-Type": "application/fhir+json" },
+      body: JSON.stringify(fhirDocument),
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      console.error("FHIR Error Response:", text);
+      throw new Error("FHIR Server rejected it: " + text.substring(0,200));
     }
 
-    const sendToast = toast.loading("Sending to Sandbox...");
+    toast.success("✅ Successfully sent to Sandbox!", { id: sendToast });
+  } catch (err) {
+    console.error("❌ Failed to send to sandbox:", err);
+    toast.error(`❌ ${err.message}`, { id: sendToast });
+  }
+};
 
-    try {
-      const res = await fetch("https://hapi.fhir.org/baseR4/DocumentReference", {
-        method: "POST",
-        headers: { "Content-Type": "application/fhir+json" },
-        body: JSON.stringify(fhirDocument),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to send to sandbox");
-      }
-
-      toast.success("✅ Successfully sent to Sandbox!", { id: sendToast });
-    } catch (err) {
-      console.error("❌ Failed to send to sandbox:", err);
-      toast.error("❌ Could not send to Sandbox. Please try again.", { id: sendToast });
-    }
-  };
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto p-4">
