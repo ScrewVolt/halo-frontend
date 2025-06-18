@@ -241,9 +241,8 @@ export default function SessionEntry() {
 
 
   const handleExport = async () => {
-    const safeNote = typeof note === "string" ? note : String(note);
-  
-    if (!safeNote.trim()) {
+    // Make sure there's something to export
+    if (!note || !note.trim()) {
       toast.error("No note available to export!");
       return;
     }
@@ -252,154 +251,74 @@ export default function SessionEntry() {
       return;
     }
   
+    // Initialize jsPDF
     const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
     const margin = 40;
     const pageWidth = pdf.internal.pageSize.getWidth();
     const maxTextWidth = pageWidth - margin * 2;
     let y = margin;
   
-    // Title
+    // ===== TITLE =====
     pdf.setFontSize(22);
     pdf.setTextColor(30, 58, 138);
     pdf.text("HALO - Session Report", margin, y);
     y += 40;
   
-    // Patient Info
+    // ===== PATIENT INFO =====
     pdf.setFontSize(13);
     pdf.setTextColor(0, 0, 0);
     if (patient?.name) pdf.text(`Patient: ${patient.name}`, margin, y);
     if (patient?.room) pdf.text(`Room #: ${patient.room}`, margin + 250, y);
     y += 20;
     if (startedAt) {
-      pdf.text(
-        `Session Started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`,
-        margin,
-        y
-      );
+      const startedStr = new Date(startedAt.toDate?.() || startedAt).toLocaleString();
+      pdf.text(`Session Started: ${startedStr}`, margin, y);
       y += 20;
     }
   
-    // Divider
+    // ===== DIVIDER =====
     pdf.setDrawColor(180);
     pdf.line(margin, y, pageWidth - margin, y);
-    y += 20;
+    y += 30;
   
-    // Section Header
+    // ===== AI NOTE =====
     pdf.setFontSize(16);
     pdf.setTextColor(80, 80, 80);
     pdf.text(`AI-Generated ${noteFormat} Note`, margin, y);
     y += 25;
   
-    let anyPrinted = false;
-  
-    // helper to draw a section box + text
-    const renderSection = (title, content) => {
-      if (!content) return;
-      anyPrinted = true;
-      pdf.setFillColor(240, 245, 255);
-      const boxHeight = 24;
-      pdf.roundedRect(margin, y, pageWidth - margin * 2, boxHeight, 5, 5, "F");
-      pdf.setFontSize(13);
-      pdf.setTextColor(30, 58, 138);
-      pdf.text(title, margin + 10, y + 17);
-      y += boxHeight + 10;
-  
-      pdf.setFontSize(12);
-      pdf.setTextColor(60, 60, 60);
-      const lines = pdf.splitTextToSize(content, maxTextWidth);
-      lines.forEach((line) => {
-        if (y > 750) {
-          pdf.addPage();
-          y = margin;
-        }
-        pdf.text(line, margin, y);
-        y += 16;
-      });
-      y += 10;
-    };
-  
-    // do format-specific parsing with dot-all regex
-    if (noteFormat === "DAR") {
-      renderSection(
-        "D (Data)",
-        safeNote.match(/\*\*D \(Data\):\*\*([\s\S]*?)(?=\*\*A|\*\*R|$)/)?.[1]?.trim() || ""
-      );
-      renderSection(
-        "A (Action)",
-        safeNote.match(/\*\*A \(Action\):\*\*([\s\S]*?)(?=\*\*R|$)/)?.[1]?.trim() || ""
-      );
-      renderSection(
-        "R (Response)",
-        safeNote.match(/\*\*R \(Response\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
-      );
-    } else if (noteFormat === "SOAP") {
-      renderSection(
-        "S (Subjective)",
-        safeNote.match(/\*\*S \(Subjective\):\*\*([\s\S]*?)(?=\*\*O|\*\*A|\*\*P|$)/)?.[1]?.trim() || ""
-      );
-      renderSection(
-        "O (Objective)",
-        safeNote.match(/\*\*O \(Objective\):\*\*([\s\S]*?)(?=\*\*A|\*\*P|$)/)?.[1]?.trim() || ""
-      );
-      renderSection(
-        "A (Assessment)",
-        safeNote.match(/\*\*A \(Assessment\):\*\*([\s\S]*?)(?=\*\*P|$)/)?.[1]?.trim() || ""
-      );
-      renderSection(
-        "P (Plan)",
-        safeNote.match(/\*\*P \(Plan\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
-      );
-    } else if (noteFormat === "BIRP") {
-      renderSection(
-        "B (Behavior)",
-        safeNote.match(/\*\*B \(Behavior\):\*\*([\s\S]*?)(?=\*\*I|\*\*R|\*\*P|$)/)?.[1]?.trim() || ""
-      );
-      renderSection(
-        "I (Intervention)",
-        safeNote.match(/\*\*I \(Intervention\):\*\*([\s\S]*?)(?=\*\*R|\*\*P|$)/)?.[1]?.trim() || ""
-      );
-      renderSection(
-        "R (Response)",
-        safeNote.match(/\*\*R \(Response\):\*\*([\s\S]*?)(?=\*\*P|$)/)?.[1]?.trim() || ""
-      );
-      renderSection(
-        "P (Plan)",
-        safeNote.match(/\*\*P \(Plan\):\*\*([\s\S]*)$/)?.[1]?.trim() || ""
-      );
-    }
-  
-    // fallback to dumping whole note if nothing matched
-    if (!anyPrinted) {
-      pdf.setFontSize(12);
-      pdf.setTextColor(60, 60, 60);
-      safeNote.split("\n").forEach((line) => {
-        if (y > 750) {
-          pdf.addPage();
-          y = margin;
-        }
-        pdf.text(line, margin, y);
-        y += 16;
-      });
-    }
-  
-    // optionally add nurse notes
-    if (sessionNotes.trim()) {
-      if (y > 700) {
+    // Dump the entire markdown note, wrapped to fit
+    pdf.setFontSize(12);
+    pdf.setTextColor(60, 60, 60);
+    const wrapped = pdf.splitTextToSize(note, maxTextWidth);
+    wrapped.forEach((line) => {
+      if (y > pdf.internal.pageSize.getHeight() - margin) {
         pdf.addPage();
         y = margin;
       }
+      pdf.text(line, margin, y);
+      y += 16;
+    });
+  
+    // ===== NURSE NOTES =====
+    if (sessionNotes.trim()) {
+      if (y > pdf.internal.pageSize.getHeight() - margin - 40) {
+        pdf.addPage();
+        y = margin;
+      }
+      y += 20;
       pdf.setFillColor(220, 250, 220);
-      const boxH = 24;
-      pdf.roundedRect(margin, y, pageWidth - margin * 2, boxH, 5, 5, "F");
+      pdf.roundedRect(margin, y, pageWidth - margin * 2, 24, 5, 5, "F");
       pdf.setFontSize(13);
       pdf.setTextColor(34, 139, 34);
       pdf.text("Nurse Notes", margin + 10, y + 17);
-      y += boxH + 10;
+      y += 34;
   
       pdf.setFontSize(12);
       pdf.setTextColor(60, 60, 60);
-      pdf.splitTextToSize(sessionNotes, maxTextWidth).forEach((line) => {
-        if (y > 750) {
+      const notesWrapped = pdf.splitTextToSize(sessionNotes, maxTextWidth);
+      notesWrapped.forEach((line) => {
+        if (y > pdf.internal.pageSize.getHeight() - margin) {
           pdf.addPage();
           y = margin;
         }
@@ -408,11 +327,10 @@ export default function SessionEntry() {
       });
     }
   
+    // Finally save
     pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
     toast.success("✅ PDF exported successfully!");
-  };
-  
-  
+  };    
 
   const handleNotesChange = async (e) => {
     const value = e.target.value;
