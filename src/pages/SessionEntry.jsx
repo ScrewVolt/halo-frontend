@@ -477,7 +477,7 @@ function escapeRegExp(s) {
         )}
       </div>
   
-      {/* Chat window */}
+      {/* Chat messages */}
       <div className="border rounded p-4 bg-gray-50 min-h-[300px] max-h-[500px] overflow-y-auto">
         {messages.map((msg) => (
           <ChatMessage
@@ -519,7 +519,7 @@ function escapeRegExp(s) {
         </button>
       </div>
   
-      {/* Voice controls */}
+      {/* Voice toggle */}
       <div className="flex flex-col sm:flex-row gap-2">
         <VoiceToggle
           recognizing={recognizing}
@@ -571,7 +571,6 @@ function escapeRegExp(s) {
           Export PDF
         </button>
   
-        {/* FHIR buttons appear whenever there is a note */}
         {note && (
           <>
             <button
@@ -609,7 +608,7 @@ function escapeRegExp(s) {
         />
       )}
   
-      {/* FHIR JSON preview panel */}
+      {/* FHIR JSON preview */}
       {showFHIR && (
         <div className="bg-white border rounded-lg p-6 text-sm text-gray-700 overflow-x-auto shadow-sm mt-6">
           <h3 className="text-lg font-bold text-blue-700 mb-4">
@@ -654,7 +653,5 @@ function escapeRegExp(s) {
         />
       </div>
     </div>
-  );
-  
-  
+  );  
 }
