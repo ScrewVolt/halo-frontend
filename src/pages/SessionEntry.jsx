@@ -241,7 +241,6 @@ export default function SessionEntry() {
 
 
   const handleExport = async () => {
-    // Make sure there's something to export
     if (!note || !note.trim()) {
       toast.error("No note available to export!");
       return;
@@ -251,86 +250,130 @@ export default function SessionEntry() {
       return;
     }
   
-    // Initialize jsPDF
     const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
     const margin = 40;
     const pageWidth = pdf.internal.pageSize.getWidth();
-    const maxTextWidth = pageWidth - margin * 2;
+    const maxWidth = pageWidth - margin * 2;
     let y = margin;
   
-    // ===== TITLE =====
+    // Title
     pdf.setFontSize(22);
     pdf.setTextColor(30, 58, 138);
     pdf.text("HALO - Session Report", margin, y);
-    y += 40;
+    y += 36;
   
-    // ===== PATIENT INFO =====
-    pdf.setFontSize(13);
+    // Patient Info
+    pdf.setFontSize(12);
     pdf.setTextColor(0, 0, 0);
     if (patient?.name) pdf.text(`Patient: ${patient.name}`, margin, y);
     if (patient?.room) pdf.text(`Room #: ${patient.room}`, margin + 250, y);
-    y += 20;
+    y += 18;
     if (startedAt) {
-      const startedStr = new Date(startedAt.toDate?.() || startedAt).toLocaleString();
-      pdf.text(`Session Started: ${startedStr}`, margin, y);
-      y += 20;
+      pdf.text(
+        `Session Started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`,
+        margin,
+        y
+      );
+      y += 18;
     }
   
-    // ===== DIVIDER =====
-    pdf.setDrawColor(180);
+    // Divider
+    pdf.setDrawColor(200);
     pdf.line(margin, y, pageWidth - margin, y);
-    y += 30;
+    y += 24;
   
-    // ===== AI NOTE =====
-    pdf.setFontSize(16);
-    pdf.setTextColor(80, 80, 80);
-    pdf.text(`AI-Generated ${noteFormat} Note`, margin, y);
-    y += 25;
+    // Section configurations
+    const sectionMap = {
+      DAR: [
+        { key: "Data",    label: "Data (D)",      bg: [240,245,255], border: [30,58,138] },
+        { key: "Action",  label: "Action (A)",    bg: [235,250,235], border: [34,139,34] },
+        { key: "Response",label: "Response (R)",  bg: [255,250,240], border: [218,165,32] },
+      ],
+      SOAP: [
+        { key: "Subjective", label: "Subjective (S)", bg: [240,245,255], border: [30,58,138] },
+        { key: "Objective",  label: "Objective (O)",  bg: [235,250,235], border: [34,139,34] },
+        { key: "Assessment", label: "Assessment (A)", bg: [255,250,240], border: [218,165,32] },
+        { key: "Plan",       label: "Plan (P)",       bg: [255,228,225], border: [219,112,147] },
+      ],
+      BIRP: [
+        { key: "Behavior",     label: "Behavior (B)",    bg: [240,245,255], border: [30,58,138] },
+        { key: "Intervention", label: "Intervention (I)",bg: [235,250,235], border: [34,139,34] },
+        { key: "Response",     label: "Response (R)",    bg: [255,250,240], border: [218,165,32] },
+        { key: "Plan",         label: "Plan (P)",        bg: [255,228,225], border: [219,112,147] },
+      ],
+    };
   
-    // Dump the entire markdown note, wrapped to fit
-    pdf.setFontSize(12);
-    pdf.setTextColor(60, 60, 60);
-    const wrapped = pdf.splitTextToSize(note, maxTextWidth);
-    wrapped.forEach((line) => {
-      if (y > pdf.internal.pageSize.getHeight() - margin) {
-        pdf.addPage();
-        y = margin;
-      }
-      pdf.text(line, margin, y);
-      y += 16;
-    });
+    const sections = sectionMap[noteFormat] || [];
   
-    // ===== NURSE NOTES =====
-    if (sessionNotes.trim()) {
-      if (y > pdf.internal.pageSize.getHeight() - margin - 40) {
-        pdf.addPage();
-        y = margin;
-      }
-      y += 20;
-      pdf.setFillColor(220, 250, 220);
-      pdf.roundedRect(margin, y, pageWidth - margin * 2, 24, 5, 5, "F");
-      pdf.setFontSize(13);
-      pdf.setTextColor(34, 139, 34);
-      pdf.text("Nurse Notes", margin + 10, y + 17);
-      y += 34;
+    // Helper: pull out the raw markdown under **Key:** or ## Key
+    const getSectionText = (key) => {
+      const re = new RegExp(`\\*\\*${key}\\s*\\([^)]*\\)?:\\*\\*([\\s\\S]*?)(?=(\\*\\*${sections.map(s=>s.key).join("|")}\\s*\\()|$)`, "i");
+      const m = note.match(re);
+      return m ? m[1].trim() : "";
+    };
   
+    // Draw each section
+    for (let { key, label, bg, border } of sections) {
+      const text = getSectionText(key);
+      if (!text) continue;
+  
+      // Header box
+      const headerH = 20;
+      pdf.setFillColor(...bg);
+      pdf.setDrawColor(...border);
+      pdf.roundedRect(margin, y, pageWidth - margin*2, headerH, 4, 4, "FD");
+  
+      pdf.setFontSize(14);
+      pdf.setTextColor(...border);
+      pdf.text(label, margin + 8, y + headerH - 6);
+      y += headerH + 8;
+  
+      // Body text
       pdf.setFontSize(12);
       pdf.setTextColor(60, 60, 60);
-      const notesWrapped = pdf.splitTextToSize(sessionNotes, maxTextWidth);
-      notesWrapped.forEach((line) => {
+      const lines = pdf.splitTextToSize(text, maxWidth);
+      for (let line of lines) {
         if (y > pdf.internal.pageSize.getHeight() - margin) {
           pdf.addPage();
           y = margin;
         }
         pdf.text(line, margin, y);
         y += 16;
-      });
+      }
+      y += 12;
     }
   
-    // Finally save
+    // Optional nurse notes block
+    if (sessionNotes.trim()) {
+      if (y > pdf.internal.pageSize.getHeight() - margin - 40) {
+        pdf.addPage();
+        y = margin;
+      }
+      const nh = 20;
+      pdf.setFillColor(220,250,220);
+      pdf.roundedRect(margin, y, pageWidth - margin*2, nh, 4,4, "F");
+      pdf.setFontSize(14);
+      pdf.setTextColor(34,139,34);
+      pdf.text("Nurse Notes", margin + 8, y + nh - 6);
+      y += nh + 8;
+  
+      pdf.setFontSize(12);
+      pdf.setTextColor(60,60,60);
+      const noteLines = pdf.splitTextToSize(sessionNotes, maxWidth);
+      for (let line of noteLines) {
+        if (y > pdf.internal.pageSize.getHeight() - margin) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += 16;
+      }
+    }
+  
     pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
     toast.success("✅ PDF exported successfully!");
-  };    
+  };
+     
 
   const handleNotesChange = async (e) => {
     const value = e.target.value;
