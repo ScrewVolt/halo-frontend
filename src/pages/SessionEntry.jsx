@@ -252,7 +252,7 @@ export default function SessionEntry() {
       return;
     }
   
-    // 2) PDF init
+    // 2) PDF boilerplate
     const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
     const margin = 40;
     const pageW = pdf.internal.pageSize.getWidth();
@@ -260,61 +260,82 @@ export default function SessionEntry() {
     const maxW = pageW - margin * 2;
     let y = margin;
   
-    // 3) Title + patient info
-    pdf.setFontSize(22).setTextColor(30,58,138)
+    // 3) Header
+    pdf.setFontSize(22).setTextColor(30, 58, 138)
        .text("HALO - Session Report", margin, y);
     y += 36;
-    pdf.setFontSize(12).setTextColor(0,0,0);
+  
+    pdf.setFontSize(12).setTextColor(0, 0, 0);
     if (patient?.name) pdf.text(`Patient: ${patient.name}`, margin, y);
     if (patient?.room) pdf.text(`Room #: ${patient.room}`, margin + 250, y);
     y += 18;
+  
     if (startedAt) {
       pdf.text(
-        `Session Started: ${new Date(startedAt.toDate?.()||startedAt).toLocaleString()}`,
+        `Session Started: ${new Date(startedAt.toDate?.() || startedAt).toLocaleString()}`,
         margin, y
       );
       y += 18;
     }
+  
     pdf.setDrawColor(200).line(margin, y, pageW - margin, y);
     y += 24;
   
-    // 4) Define and escape our headings
-    const config = {
-      DAR: [
-        { hdr: "**D (Data):**",    label:"D (Data)",    bg:[240,245,255], border:[30,58,138] },
-        { hdr: "**A (Action):**",  label:"A (Action)",  bg:[235,250,235], border:[34,139,34]  },
-        { hdr: "**R (Response):**",label:"R (Response)",bg:[255,250,240], border:[218,165,32] }
-      ],
-      SOAP: [
-        { hdr:"**S (Subjective):**", label:"S (Subjective)", bg:[240,245,255], border:[30,58,138] },
-        { hdr:"**O (Objective):**",  label:"O (Objective)",  bg:[235,250,235], border:[34,139,34]  },
-        { hdr:"**A (Assessment):**", label:"A (Assessment)", bg:[255,250,240], border:[218,165,32] },
-        { hdr:"**P (Plan):**",       label:"P (Plan)",       bg:[255,228,225], border:[219,112,147] }
-      ],
-      BIRP: [
-        { hdr:"**B (Behavior):**",     label:"B (Behavior)",    bg:[240,245,255], border:[30,58,138] },
-        { hdr:"**I (Intervention):**", label:"I (Intervention)",bg:[235,250,235], border:[34,139,34]  },
-        { hdr:"**R (Response):**",     label:"R (Response)",    bg:[255,250,240], border:[218,165,32] },
-        { hdr:"**P (Plan):**",         label:"P (Plan)",        bg:[255,228,225], border:[219,112,147] }
-      ],
-    }[noteFormat] || [];
+    // 4) Section definitions
+    let sections = [];
+    if (noteFormat === "DAR") {
+      sections = [
+        { splitOn: "**Data:**",    label: "Data (D)",    bg: [240,245,255], border: [30,58,138] },
+        { splitOn: "**Action:**",  label: "Action (A)",  bg: [235,250,235], border: [34,139,34]  },
+        { splitOn: "**Response:**",label: "Response (R)",bg: [255,250,240], border: [218,165,32] }
+      ];
+    } else if (noteFormat === "SOAP") {
+      sections = [
+        { splitOn: "**Subjective:**", label: "Subjective (S)", bg: [240,245,255], border: [30,58,138] },
+        { splitOn: "**Objective:**",  label: "Objective (O)",  bg: [235,250,235], border: [34,139,34]  },
+        { splitOn: "**Assessment:**", label: "Assessment (A)", bg: [255,250,240], border: [218,165,32] },
+        { splitOn: "**Plan:**",       label: "Plan (P)",       bg: [255,228,225], border: [219,112,147] }
+      ];
+    } else if (noteFormat === "BIRP") {
+      sections = [
+        { splitOn: "**Behavior:**",     label: "Behavior (B)",    bg: [240,245,255], border: [30,58,138] },
+        { splitOn: "**Intervention:**", label: "Intervention (I)",bg: [235,250,235], border: [34,139,34]  },
+        { splitOn: "**Response:**",     label: "Response (R)",    bg: [255,250,240], border: [218,165,32] },
+        { splitOn: "**Plan:**",         label: "Plan (P)",        bg: [255,228,225], border: [219,112,147] }
+      ];
+    }
   
-    // 5) Escape regex helpers
-    const escapeRx = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const allHdrs = config.map(s => escapeRx(s.hdr)).join('|');
+    // 5) Split note into chunks
+    // Build a single combined regex that matches any of our headings
+    const headingRegex = new RegExp(
+      sections.map(s => escapeRegExp(s.splitOn)).join("|"),
+      "g"
+    );
   
-    // 6) Extract-and-render
-    let drewAny = false;
-    config.forEach(({ hdr, label, bg, border }) => {
-      // build a RegExp:  <escaped heading>(capture everything lazily)(?= next heading OR end)
-      const rx = new RegExp(
-        escapeRx(hdr) + "([\\s\\S]*?)(?=(?:" + allHdrs + ")|$)",
-        "i"
-      );
-      const m = safeNote.match(rx);
-      const content = m?.[1]?.trim();
+    // We do a split-include by re-inserting the headings
+    const rawParts = safeNote
+      .split(headingRegex)
+      // split will drop the headings themselves from parts; 
+      // so we grab them by matching
+      .map(str => str.trim())
+      .filter(str => str);
+  
+    // Because split drops the separators, we need to pair headings + content.
+    // Easiest: iterate through sections in order, and for each section.splitOn,
+    // pull the next rawParts chunk.
+    let drew = false;
+    let cursor = 0;
+  
+    sections.forEach(({ splitOn, label, bg, border }) => {
+      // find the index of this heading in the original note
+      const idx = safeNote.indexOf(splitOn);
+      if (idx === -1) return;
+  
+      // The content for this section lives in rawParts[cursor]
+      const content = rawParts[cursor];
+      cursor++;
       if (!content) return;
-      drewAny = true;
+      drew = true;
   
       // paginate
       if (y > pageH - margin - 100) {
@@ -322,19 +343,22 @@ export default function SessionEntry() {
         y = margin;
       }
   
-      // header box
-      const hH = 24;
-      pdf.setFillColor(...bg).setDrawColor(...border)
-         .roundedRect(margin, y, pageW - margin*2, hH, 4, 4, "FD")
-         .setFontSize(14).setTextColor(...border)
-         .text(label, margin + 8, y + hH - 8);
-      y += hH + 8;
+      // 6) Box + header
+      const headerH = 24;
+      pdf.setFillColor(...bg)
+         .setDrawColor(...border)
+         .roundedRect(margin, y, pageW - margin*2, headerH, 5, 5, "FD")
+         .setFontSize(14)
+         .setTextColor(...border)
+         .text(label, margin + 8, y + headerH - 8);
+      y += headerH + 8;
   
-      // body
+      // 7) Content lines
       pdf.setFontSize(12).setTextColor(60,60,60);
       pdf.splitTextToSize(content, maxW).forEach(line => {
         if (y > pageH - margin) {
-          pdf.addPage(); y = margin;
+          pdf.addPage();
+          y = margin;
         }
         pdf.text(line, margin, y);
         y += 16;
@@ -342,8 +366,8 @@ export default function SessionEntry() {
       y += 12;
     });
   
-    // 7) fallback
-    if (!drewAny) {
+    // 8) Fallback if nothing matched
+    if (!drew) {
       pdf.setFontSize(12).setTextColor(60,60,60);
       safeNote.split("\n").forEach(line => {
         if (y > pageH - margin) { pdf.addPage(); y = margin; }
@@ -352,14 +376,16 @@ export default function SessionEntry() {
       });
     }
   
-    // 8) Nurse notes
+    // 9) Nurse notes at the end
     if (sessionNotes.trim()) {
       if (y > pageH - margin - 60) { pdf.addPage(); y = margin; }
       const nh = 24;
-      pdf.setFillColor(220,250,220).setDrawColor(34,139,34)
-         .roundedRect(margin, y, pageW - margin*2, nh, 4,4, "FD")
-         .setFontSize(14).setTextColor(34,139,34)
-         .text("Nurse Notes", margin + 8, y + nh - 8);
+      pdf.setFillColor(220,250,220)
+         .setDrawColor(34,139,34)
+         .roundedRect(margin, y, pageW - margin*2, nh, 5,5,"FD")
+         .setFontSize(14)
+         .setTextColor(34,139,34)
+         .text("Nurse Notes", margin+8, y+nh-8);
       y += nh + 8;
   
       pdf.setFontSize(12).setTextColor(60,60,60);
@@ -370,13 +396,16 @@ export default function SessionEntry() {
       });
     }
   
-    // 9) Done
-    pdf.save(`${patient?.name||"Patient"}_Session_Report.pdf`);
+    // 10) Done
+    pdf.save(`${patient?.name || "Patient"}_Session_Report.pdf`);
     toast.success("✅ PDF exported successfully!");
   };
   
+  // helper to escape regex metachars
+  function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }  
   
-
   const handleNotesChange = async (e) => {
     const value = e.target.value;
     setSessionNotes(value);
