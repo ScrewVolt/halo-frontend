@@ -1,9 +1,9 @@
 import { encode } from "js-base64";
 
-export default function generateFHIRDocument({ darNote, patient, generatedAt }) {
-  if (!darNote) return null;
+export default function generateFHIRDocument({ note, patient, generatedAt }) {
+  if (!note) return null;
 
-  const base64Dar = encode(darNote);
+  const base64Dar = encode(note);
 
   return {
     resourceType: "DocumentReference",
@@ -18,11 +18,12 @@ export default function generateFHIRDocument({ darNote, patient, generatedAt }) 
       ]
     },
     subject: {
-      reference: "Patient/example",
+      // use the real patient id if you have one
+      reference: patient?.id ? `Patient/${patient.id}` : "Patient/example",
       display: patient?.name || "Patient"
     },
     date: generatedAt || new Date().toISOString(),
-    description: "AI-generated nursing DAR summary",
+    description: "AI-generated nursing summary",
     content: [
       {
         attachment: {
